@@ -1,0 +1,137 @@
+
+###############################################
+#                 Base Steps                  #
+###############################################
+
+.base_image_template:
+  image: ghcr.io/cirruslabs/flutter:stable
+ 
+.base_build_assemble:
+  extends: .base_image_template
+  stage: build
+  script:
+    - cd mobile/android/app
+    - echo $STORE_FILE
+    - cat $STORE_FILE | base64 --decode > spezi-media.keystore
+    - cd ..
+    - echo -e "storeFile=spezi-media.keystore\nstorePassword=$STORE_PASSWORD\nkeyAlias=$KEY_ALIAS\nkeyPassword=$KEY_PASSWORD" > key.properties
+    - cd ..
+    - flutter pub get
+    - flutter build apk --dart-define API_BASE_URL=$API_BASE_URL
+  artifacts:
+    name: app-release.apk
+    when: always
+    paths:
+      - mobile/build/app/outputs/apk/release/
+
+.base_build_bundle:
+  extends: .base_image_template
+  stage: build
+  script:
+    - cd mobile/android/app
+    - echo $STORE_FILE
+    - cat $STORE_FILE | base64 --decode > spezi-media.keystore
+    - cd ..
+    - echo -e "storeFile=spezi-media.keystore\nstorePassword=$STORE_PASSWORD\nkeyAlias=$KEY_ALIAS\nkeyPassword=$KEY_PASSWORD" > key.properties
+    - cd ..
+    - flutter pub get
+    - flutter build appbundle --dart-define API_BASE_URL=$API_BASE_URL
+  artifacts:
+    name: app-release.aab
+    when: always
+    paths:
+      - mobile/build/app/outputs/bundle/release/
+
+###############################################
+#                 Test Steps                  #
+###############################################
+
+mobile:test:
+  extends: .base_image_template
+  stage: test
+  allow_failure: false
+  variables:
+    MIN_COVERAGE: 0
+  script:
+    - cd mobile
+    - flutter pub get
+    - flutter test --coverage
+    - lcov --list coverage/lcov.info
+    - genhtml coverage/lcov.info --output=coverage
+    - coverage="$(genhtml coverage/lcov.info --output=coverage | grep -Poi 's*lines\.*:\s*\K([\d\.]+)')"
+    - |
+      if (( $(echo "$coverage < $MIN_COVERAGE" |bc -l) ))
+      then
+        echo "$coverage% of code coverage below threshold of $MIN_COVERAGE%"
+        exit 1
+      else
+        exit 0
+      fi
+  coverage: '/\s*lines\.*:\s*([\d\.]+%)/'
+  only:
+    - /^v\d+\.\d+\.\d+-rc\d+$/ # Release candidate tags
+    - /^v\d+\.\d+\.\d+$/ # Version tags
+    - merge_requests
+    - main
+    - hom
+    - dev
+
+mobile:linter:
+  extends: .base_image_template
+  stage: test
+  allow_failure: false
+  script:
+    - cd mobile
+    - flutter pub get
+    - flutter analyze
+  only:
+    - /^v\d+\.\d+\.\d+-rc\d+$/ # Release candidate tags
+    - /^v\d+\.\d+\.\d+$/ # Version tags
+    - merge_requests
+    - main
+    - hom
+    - dev
+
+###############################################
+#                 Build Steps                #
+###############################################
+
+mobile:build:apk:hml:
+  extends: .base_build_assemble
+  needs:
+    - mobile:test
+    - mobile:linter
+  variables:
+    API_BASE_URL: "https://momentofiscal.hml.spezi.com.br"
+  only:
+    - /^v\d+\.\d+\.\d+-rc\d+$/ # Release candidate tags
+
+mobile:build:aab:hml:
+  extends: .base_build_bundle
+  needs:
+    - mobile:test
+    - mobile:linter
+  variables:
+    API_BASE_URL: "https://momentofiscal.hml.spezi.com.br"
+  only:
+    - /^v\d+\.\d+\.\d+-rc\d+$/ # Release candidate tags
+
+mobile:build:aab:
+  extends: .base_build_bundle
+  needs:
+    - mobile:test
+    - mobile:linter
+  variables:
+    API_BASE_URL: "https://momentofiscal.spezi.com.br"
+  only:
+    - /^v\d+\.\d+\.\d+$/ # Version tags
+
+mobile:build:apk:
+  extends: .base_build_assemble
+  needs:
+    - mobile:test
+    - mobile:linter
+  variables:
+    API_BASE_URL: "https://momentofiscal.spezi.com.br"
+  only:
+    - /^v\d+\.\d+\.\d+$/ # Version tags

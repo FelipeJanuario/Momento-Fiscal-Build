@@ -1,0 +1,83 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/typescript-node
+{
+  "name": "Momento Fiscal | Dev Container",
+  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+  "initializeCommand": "ls",
+  "dockerFile": "Dockerfile",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Ruby development VS Code extensions
+        "Shopify.ruby-lsp",
+        "wingrunr21.vscode-ruby",
+        "bung87.vscode-gemfile",
+        "rubocop.vscode-rubocop",
+        "miguel-savignano.ruby-symbols",
+
+        // Docker development VS Code extensions
+        "dbaeumer.vscode-eslint",
+        "ms-azuretools.vscode-docker",
+
+        // Flutter development VS Code extensions
+        "dart-code.flutter",
+        "dart-code.dart-code"
+      ],
+      "settings": {
+        "remote.localPortHost": "allInterfaces",
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "editor.tabSize": 2,
+        "editor.detectIndentation": false,
+        "editor.insertSpaces": true,
+        "[ruby]": {
+          "editor.defaultFormatter": "rubocop.vscode-rubocop",
+          "editor.formatOnSave": true
+        }
+      }
+    }
+  },
+  "features": {
+    "docker-in-docker": {
+      "version": "latest"
+    }
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/app,type=bind,consistency=consistent"
+  ],
+  "remoteEnv": {
+    "RAILS_ENV": "development",
+    "NODE_ENV": "development",
+    "DATABASE_HOST": "localhost",
+    "DATABASE_USER": "postgres",
+    "DATABASE_PASSWORD": "postgres",
+    "REDIS_HOST": "localhost",
+    "SECRET_KEY_BASE": "jwefk0932fk902kjf903fj2jfgfdzswpckr8",
+    // Stripe development token
+    "STRIPE_SECRET_KEY": "sk_test_YOUR_STRIPE_KEY_HERE",
+    "STRIPE_PUBLISHABLE_KEY": "pk_test_51Pr2VWDLzlwdcZ5qvGR9NQyPVYoed4qONhCdOxsye7ksEH2FF2h6OxsQHeSXqCZSPuWpQkirXiL4HIpAMnSLGw5300AVtXqabu",
+    // Biddings Analyser development token
+    "BIDDINGS_ANALYSER_API_KEY": "eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI0ODBjMWFjOS05MzA2LTQwNTMtYjdmMC0yNGM1YjFmODY5MTAiLCJzdWIiOiI2NmM3NTNiYjI0Yjg5ZDQ3NjhjMjM1N2MiLCJzY3AiOiJ1c2VyIiwiYXVkIjpudWxsLCJpYXQiOjE3MjQ5MzkyMzMsImV4cCI6NDg4MDYzNDQzM30.sp0tl7xax00fMKo4oRyA-IVQspF6ZECH_EYOma4hY1c",
+    "JUSBRASIL_API_TOKEN": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI1dnJEZ1hCS21FLTdFb3J2a0U1TXU5VmxJZF9JU2dsMnY3QWYyM25EdkRVIn0.eyJleHAiOjE3MzQ3MjI1MTYsImlhdCI6MTczNDY5MzcxNiwiYXV0aF90aW1lIjoxNzM0NjkzNzE2LCJqdGkiOiJjM2RiNWEwOC0zYjMxLTQ3MzYtYWUzNS1kNTdiNWE1N2EyMjEiLCJpc3MiOiJodHRwczovL3Nzby5jbG91ZC5wamUuanVzLmJyL2F1dGgvcmVhbG1zL3BqZSIsImF1ZCI6WyJicm9rZXIiLCJhY2NvdW50Il0sInN1YiI6IjZjYzE5MDNhLTIwODktNDUyMC05NDY2LTAyYTdmZTk3NzcxYSIsInR5cCI6IkJlYXJlciIsImF6cCI6InBvcnRhbGV4dGVybm8tZnJvbnRlbmQiLCJub25jZSI6IjZhMjZkODNhLWZhOWYtNGE0YS04MjRhLWU5Y2Q5M2IyNTRkYiIsInNlc3Npb25fc3RhdGUiOiI1YTMxN2RiMS0wN2E0LTRjOTktOTczMy1lNTllMDFhYzZiNzUiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbImh0dHBzOi8vcG9ydGFsZGVzZXJ2aWNvcy5wZHBqLmp1cy5iciJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsiZGVmYXVsdC1yb2xlcy1wamUiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYnJva2VyIjp7InJvbGVzIjpbInJlYWQtdG9rZW4iXX0sImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJzaWQiOiI1YTMxN2RiMS0wN2E0LTRjOTktOTczMy1lNTllMDFhYzZiNzUiLCJBY2Vzc2FSZXBvc2l0b3JpbyI6Ik9rIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJLQUlPIERFIEdPRVMgU09VU0EiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiIwNzAzNzc5MzExNiIsImdpdmVuX25hbWUiOiJLQUlPIERFIEdPRVMiLCJmYW1pbHlfbmFtZSI6IlNPVVNBIiwiZW1haWwiOiJrYWlvZ29lczE5OTlAZ21haWwuY29tIn0.WKRxI7iLe0YBF2vTVmVIErtEWoek4oH0gS1quh-LJNa1Azgnmc8m_Ell-12Oy4QaLyKCqVgCIAY0v7FySx5S3nG17Cqn-WhkJlz1KlWiuR5P6ZbF26QscP98Z1Y-zfQR4bE1fMTZrITn7uTK3TcIfbopn0-DHtgpwaWgMkTlOyihI-Y4ayuIxkyMbFV8za4x4ZUSm__6gFSqIDkNx842mQAbeEL83pIiRyp6wSwF6TfDER5oIesAKsyoCcXrpj_L5T9pHD6--D2ArwmaxvlC3rjUcjDTRw6j8wXFTeieWip_HDbX7SsRx7LWLATr-aL6UEQBYBiiqZ3slXqxdRLaoA",
+    "SERPRO_CONSUMER_KEY": "aaaaaaaaaaaaaaaa",
+    "SERPRO_CONSUMER_SECRET": "SSSSSsassaaaa"
+  },
+  // "postCreateCommand": ".devcontainer/postCreateCommand.sh",
+  // "postAttachCommand": ".devcontainer/postAttachCommand.sh",
+  "postStartCommand": {
+    // "api": "cd api && rails s -b 0.0.0.0 -p 3000",
+    // "sidekiq": "cd api && bundle exec sidekiq -C config/sidekiq.yml",
+    // "docker-compose-services": "docker-compose --project-name app --project-directory ./ --file .devcontainer/docker-compose.workspace.yml up --detach"
+  },
+  "forwardPorts": [
+    3000,
+    8025,
+    5432
+  ],
+  "portsAttributes": {
+    "3000":  { "label": "api" },
+    "8025":  { "label": "email inbox" },
+    "5432":  { "label": "postgres" }
+  },
+  "otherPortsAttributes": { "onAutoForward": "silent" },
+  "workspaceFolder": "/app"
+}

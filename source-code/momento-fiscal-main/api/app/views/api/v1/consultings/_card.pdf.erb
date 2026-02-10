@@ -1,0 +1,55 @@
+<div class="card" style="position: relative">
+  <h2 style="margin-top: 0">Consultoria</h2>
+
+  <p>
+    <strong>Código da consultoria:</strong>
+    <span><%= consulting.id %></span>
+  </p>
+
+  <p>
+    <strong>Nome do cliente:</strong>
+  <span><%= consulting.client.present? ? consulting.client.name : "Aguardando Usuário" %></span>
+  </p>
+
+  <p>
+    <strong>Nome do consultor:</strong>
+    <span><%= consulting.consultant.name %></span>
+  </p>
+
+  <p>
+    <strong>Valor da dívida Fiscal Tributária:</strong>
+    <span><%= number_to_currency(consulting.value) %></span>
+  </p>
+
+  <p>
+    <strong>Quantidade da dívida Fiscal Tributária:</strong>
+    <span><%= consulting.debts_count %></span>
+  </p>
+
+  <p>
+    <strong>Status:</strong>
+    <% case  %> 
+      <% when consulting.not_started? %>
+        <span style="color: #007bff">Não iniciado</span>
+      <% when consulting.waiting? %>
+        <span style="color: #ffc107">Aguardando Proposta</span>
+      <% when consulting.approved? %>
+        <span style="color: #28a745">Aprovado</span>
+      <% when consulting.in_progress? %>
+        <span style="color: #17a2b8">Em andamento</span>
+      <% when consulting.finished? %>
+        <span style="color: #28a745">Finalizado</span>
+      <% when consulting.failed? %>
+        <span style="color: #dc3545">Falhou</span>
+      <% when consulting.waiting_for_user_creation? %>
+        <span style="color: #dc3545">Aguardando cliente vincular</span>
+      <% else %>
+        <span style="color: #6c757d">Desconhecido</span>
+    <% end %>
+  </p>
+
+  <p>
+    <strong>Data de criação:</strong>
+    <span><%= l consulting.created_at, format: :long %></span>
+  </p>
+</div>

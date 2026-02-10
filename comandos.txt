@@ -1,0 +1,6 @@
+
+cd "c:\momento-fiscal-transferencia\source-code\momento-fiscal-main\mobile"; flutter run -d chrome --dart-define=DEV_MODE=true
+
+flutter run -d chrome --dart-define=DEV_MODE=true
+
+

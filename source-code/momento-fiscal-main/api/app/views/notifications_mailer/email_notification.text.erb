@@ -1,0 +1,14 @@
+Olá <%= @notification.user.name %>,
+
+
+<% if @notification.title.present? %>
+  <%= @notification.title %>
+<% end %>
+
+
+<%= @notification.content %>
+
+
+<% if @notification.redirect_to.present? %>
+<%= @notification.redirect_to %>
+<% end %>

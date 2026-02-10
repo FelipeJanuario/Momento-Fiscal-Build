@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Momento Fiscal</title>
+  <meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/>
+
+  <style>
+    /* Reset some default styles */
+    body, table, td, a {
+      font-family: Roboto, Arial, sans-serif;
+      font-size: 18px;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+
+    p {
+      margin: 0 0 10px;
+    }
+
+    a {
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    /* Center the card container */
+    .card-container {
+      text-align: center;
+      width: 100%;
+    }
+    /* Style the card */
+    .card {
+      background-color: #fff;
+      background-color: rgba(0, 0, 0, 0.07);
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      display: inline-block; /* Make the card shrink to fit content */
+      margin: 20px auto; /* Center horizontally with top/bottom margin */
+      padding: 20px;
+      text-align: left;
+      width: 100%%
+    }
+    /* Responsive image */
+    .card img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+    /* Media query for smaller screens */
+    @media (max-width: 480px) {
+      .card {
+        width: 95%; /* Occupy more space on smaller screens */
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div style="width: calc(100% - 70px); position: relative; padding: 20px 35px 20px 35px; box-sizing: border-box; margin: 0 auto;">
+    <%= yield %>
+  </div>
+</body>
+</html>
+

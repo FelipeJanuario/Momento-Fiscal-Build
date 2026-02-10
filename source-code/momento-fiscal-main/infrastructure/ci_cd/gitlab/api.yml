@@ -1,0 +1,268 @@
+image: "alpine"
+
+cache:
+  key: gems_and_packages
+  policy: pull
+  paths:
+    - apt-cache/
+    - vendor/ruby
+
+
+###################
+##  CI/CD Bases  ##
+###################
+
+.base:
+  image: ruby:3.3.6
+  cache:
+    key: gems_and_packages
+    paths:
+      - vendor/ruby
+  before_script:
+    - cd api
+    - apt update -qq
+    - apt install -y libpq-dev libvips libvips-tools ffmpeg mupdf mupdf-tools poppler-utils
+    - gem install bundler --no-document
+    - bundle config set --local path 'vendor'
+    - bundle install --jobs $(nproc) "${FLAGS[@]}"
+
+.base_db:
+  extends: .base
+  services:
+    - postgres:14-alpine
+    - redis:7-alpine
+  variables:
+    POSTGRES_DB: smartcorner_test
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: 'postgres'
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+    RAILS_ENV: test
+    DATABASE_HOST: postgres
+  before_script:
+    - cd api
+    - apt update -qq
+    - apt install -y libpq-dev libvips libvips-tools ffmpeg mupdf mupdf-tools poppler-utils
+    - gem install bundler --no-document
+    - bundle config set --local path 'vendor'
+    - bundle install --jobs $(nproc) "${FLAGS[@]}"
+    - bundle exec rake db:setup
+
+
+######################
+##  Test Pipelines  ##
+######################
+
+api:test:bundle_audit:
+  stage: test
+  allow_failure: false
+  image: ruby:3.3.6
+  script:
+    - cd api
+    - gem install bundle-audit
+    - bundle-audit check --update --config .bundler-audit.yml
+  only:
+    - /^v\d+\.\d+\.\d+-rc\d+$/ # Release candidate tags
+    - /^v\d+\.\d+\.\d+$/ # Version tags
+    - merge_requests
+    - main
+    - hom
+
+api:test:rubocop:
+  stage: test
+  extends: .base
+  allow_failure: false
+  cache:
+    policy: pull-push
+  script:
+    - bundle exec rubocop
+  only:
+    - /^v\d+\.\d+\.\d+-rc\d+$/ # Release candidate tags
+    - /^v\d+\.\d+\.\d+$/ # Version tags
+    - merge_requests
+    - main
+    - hom
+
+api:test:rspec:
+  stage: test
+  extends: .base_db
+  coverage: '/LOC\s\(\d+\.\d+%\)\scovered/'
+  allow_failure: false
+  artifacts:
+    name: coverage
+    when: always
+    paths:
+      - api/coverage/
+  variables:
+    COVERAGE: "true"
+    MIN_COVERAGE: 60
+  only:
+    - /^v\d+\.\d+\.\d+-rc\d+$/ # Release candidate tags
+    - /^v\d+\.\d+\.\d+$/ # Version tags
+    - merge_requests
+    - main
+    - hom
+  script:
+    - apt update && apt install jq bc -y
+    - bundle exec rspec
+    - jsonStr="$(cat $CI_PROJECT_DIR/api/coverage/.last_run.json)"
+    - coverage="$(echo $jsonStr | jq .result.line)"
+    - |
+      if (( $(echo "$coverage < $MIN_COVERAGE" |bc -l) ))
+      then
+        echo "$coverage% of code coverage below threshold of $MIN_COVERAGE%"
+        exit 1
+      else
+        exit 0
+      fi
+
+########################
+##  report Pipelines  ##
+########################
+
+api:test:brakeman:
+  extends: .base
+  stage: test
+  allow_failure: false
+  artifacts:
+    name: brakeman_report
+    when: always
+    paths:
+      - api/brakeman/
+  only:
+    - /^v\d+\.\d+\.\d+-rc\d+$/ # Release candidate tags
+    - /^v\d+\.\d+\.\d+$/ # Version tags
+    - merge_requests
+    - main
+    - hom
+  script:
+    - bundle exec brakeman --format html -o brakeman/index.html
+
+
+#######################
+##  Build Pipelines  ##
+#######################
+
+api:build:container:hom:
+  image: docker:latest
+  stage: build
+  needs:
+    - api:test:bundle_audit
+    - api:test:rubocop
+    - api:test:rspec
+    - api:test:brakeman
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - timestamp=$(date +"%y%m%d%H%M%S")
+    - export tag="rc-latest"
+    - export tag_version="${CI_COMMIT_REF_NAME}"
+    - docker build --tag "$CI_REGISTRY_IMAGE/api:${tag}" --tag "$CI_REGISTRY_IMAGE/api:${tag_version}" --file ./infrastructure/dockerfiles/Dockerfile.api ./api
+    - docker push "$CI_REGISTRY_IMAGE/api:${tag}"
+    - docker push "$CI_REGISTRY_IMAGE/api:${tag_version}"
+  only:
+    - /^v\d+\.\d+\.\d+-rc\d+$/ # Release candidate tags
+
+api:build:container:production:
+  image: docker:latest
+  stage: build
+  needs:
+    - api:test:bundle_audit
+    - api:test:rubocop
+    - api:test:rspec
+    - api:test:brakeman
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - timestamp=$(date +"%y%m%d%H%M%S")
+    - export tag="latest"
+    - export tag_version="${CI_COMMIT_REF_NAME}"
+    - docker build --tag "$CI_REGISTRY_IMAGE/api:${tag}" --tag "$CI_REGISTRY_IMAGE/api:${tag_version}" --file ./infrastructure/dockerfiles/Dockerfile.api ./api
+    - docker push "$CI_REGISTRY_IMAGE/api:${tag}"
+    - docker push "$CI_REGISTRY_IMAGE/api:${tag_version}"
+  only:
+    - /^v\d+\.\d+\.\d+$/ # Version tags
+
+########################
+##  deploy Pipelines  ##
+########################:
+
+api:deploy:hom:
+  image: docker:latest
+  stage: deploy
+  needs:
+    - api:build:container:hom
+  only:
+    - /^v\d+\.\d+\.\d+-rc\d+$/ # Release candidate tags
+  environment:
+    name: hom/$CI_COMMIT_REF_NAME
+    url: https://momentofiscal.hml.spezi.com.br
+  variables:
+    DOCKER_HOST: 10.0.4.11
+    APP_DOMAIN: momentofiscal.hml.spezi.com.br
+    APP_BACK_IMAGE: ${CI_REGISTRY_IMAGE}/api:${CI_COMMIT_REF_NAME}
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://10.0.1.11:4318
+    OTEL_SERVICE_NAME: momento-fiscal-api-hom
+    # Mailer config
+    MAIL_SMTP_PORT: 465
+    MAIL_SMTP_LOGIN: contatosmitt@spezi.com.br
+    MAIL_SMTP_DOMAIN: email-ssl.com.br
+    MAIL_SMTP_SSL: true
+    MAIL_SMTP_PASSWORD_FILE: /run/secrets/momento_fiscal_smtp_password
+    # Active Record Encryption config
+    ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY_FILE: /run/secrets/momento_fiscal_active_record_encryption_primary_key
+    ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY_FILE: /run/secrets/momento_fiscal_active_record_encryption_deterministic_key
+    ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT_FILE: /run/secrets/momento_fiscal_active_record_encryption_key_derivation_salt
+    # Biddings Analyser config
+    BIDDINGS_ANALYSER_URL: https://ba.dtr40.com.br
+    BIDDINGS_ANALYSER_API_KEY_FILE: /run/secrets/momento_fiscal_biddings_analyser_api_key
+    # Stripe config
+    STRIPE_SECRET_KEY_FILE: /run/secrets/momento_fiscal_stripe_secret_key
+    STRIPE_PUBLISHABLE_KEY: $HML_STRIPE_PUBLISHABLE_KEY
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - docker image pull $APP_BACK_IMAGE
+    - docker stack deploy momento_fiscal_hom --compose-file=infrastructure/swarm_services/docker-compose.yml --with-registry-auth
+
+api:deploy:production:
+  image: docker:latest
+  stage: deploy
+  when: manual
+  needs:
+    - api:build:container:production
+  only:
+    - /^v\d+\.\d+\.\d+$/ # Version tags
+  environment:
+    name: production/$CI_COMMIT_REF_NAME
+    url: https://momentofiscal.spezi.com.br
+  variables:
+    DOCKER_HOST: 10.0.1.11
+    APP_DOMAIN: momentofiscal.spezi.com.br
+    APP_BACK_IMAGE: ${CI_REGISTRY_IMAGE}/api:${CI_COMMIT_REF_NAME}
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://10.0.1.11:4318
+    OTEL_SERVICE_NAME: momento-fiscal-api
+    # Mailer config
+    MAIL_SMTP_PORT: 587
+    MAIL_SMTP_LOGIN: marketing@momentofiscal.com.br
+    MAIL_SMTP_DOMAIN: smtp.hostinger.com
+    MAIL_SMTP_SSL: false
+    MAIL_SMTP_PASSWORD_FILE: /run/secrets/momento_fiscal_smtp_password
+    # Active Record Encryption config
+    ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY_FILE: /run/secrets/momento_fiscal_active_record_encryption_primary_key
+    ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY_FILE: /run/secrets/momento_fiscal_active_record_encryption_deterministic_key
+    ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT_FILE: /run/secrets/momento_fiscal_active_record_encryption_key_derivation_salt
+    # Biddings Analyser config
+    BIDDINGS_ANALYSER_URL: https://ba.dtr40.com.br
+    BIDDINGS_ANALYSER_API_KEY_FILE: /run/secrets/momento_fiscal_biddings_analyser_api_key
+    # Stripe config
+    STRIPE_SECRET_KEY_FILE: /run/secrets/momento_fiscal_stripe_secret_key
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - docker image pull $APP_BACK_IMAGE
+    - docker stack deploy momento_fiscal_production --compose-file=infrastructure/swarm_services/docker-compose.yml --with-registry-auth

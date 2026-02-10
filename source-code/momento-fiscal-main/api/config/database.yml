@@ -1,0 +1,23 @@
+default: &default
+  adapter:  postgresql
+  encoding: unicode
+  pool:     <%= ENV.fetch("RAILS_MAX_THREADS") { 6 } %>
+  port:     5432
+  host:     <%= ENV['DATABASE_HOST']     || 'localhost' %>
+  username: <%= ENV['DATABASE_USER']     || 'postgres' %>
+  password: <%= ENV['DATABASE_PASSWORD'] || 'postgres' %>
+  database: <%= ENV['DATABASE_NAME']     || "momento_fiscal_api_#{Rails.env}" %>
+
+development:
+  <<: *default
+
+# Warning: The database defined as "test" will be erased and
+# re-generated from your development database when you run "rake".
+# Do not set this db to the same as development or production.
+test:
+  <<: *default
+  database: momento_fiscal_api_test
+
+
+production:
+  <<: *default

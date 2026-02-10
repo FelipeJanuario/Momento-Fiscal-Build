@@ -1,0 +1,99 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "64F44F75",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "0.0",
+      "familyShareable" : false,
+      "internalID" : "6737513122",
+      "localizations" : [
+        {
+          "description" : "Plano Grátis",
+          "displayName" : "Plano Free",
+          "locale" : "pt_BR"
+        }
+      ],
+      "productID" : "plan_free",
+      "referenceName" : "Plano Grátis",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6636497263",
+    "_developerTeamID" : "NPG5D28NH5",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 752676587.615201,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "subscriptionOffersKeyPair" : {
+    "id" : "CE239C4C",
+    "privateKey" : "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgEP89bC4ofGv2qExRzT8cUqP3qwn6R7eZWvVOE6SvURygCgYIKoZIzj0DAQehRANCAATfs1xgWu/89Z5Dw43QWylOBS/lSnl8aXnPC3wV8Dq4kHTBJ2OqJwT+tNzB5FuG6X3x5d2HJ9MLIwfEhNiWQhhp"
+  },
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

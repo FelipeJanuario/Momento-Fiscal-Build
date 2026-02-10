@@ -1,0 +1,23 @@
+<div style="width: 65%; margin: auto">
+  <%= render "api/v1/consultings/card", consulting: @consulting_proposal.consulting %>
+</div>
+
+<br>
+
+<h2>Proposta</h2>
+
+<% if @consulting_proposal.services.present? %>
+<ul>
+  <% @consulting_proposal.services.each do |service| %>
+    <li><%= service %></li>
+  <% end %>
+</ul>
+<% end %>
+
+<%= @consulting_proposal.description_as_html.html_safe %>
+
+<% if @consulting_proposal.consulting.client_id.blank? %>
+  <div style="width: 40%;margin: auto">
+    <%= render "api/v1/consultings/invitation_card", consulting: @consulting_proposal.consulting %>
+  </div>
+<% end %>

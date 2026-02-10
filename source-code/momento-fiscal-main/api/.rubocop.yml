@@ -1,0 +1,48 @@
+require:
+  - rubocop-performance
+  - rubocop-rails
+  - rubocop-rspec
+  - rubocop-rspec_rails
+  - rubocop-factory_bot
+
+AllCops:
+  NewCops: enable
+  Exclude:
+    - 'bin/*'
+    - 'db/**/*'
+    - 'config/**/*'
+    - 'vendor/'
+    - 'vendor/**/*'
+    - 'lib/**/*'
+  DisplayStyleGuide: true
+  ExtraDetails: true
+
+Layout/LineLength:
+  Max: 120
+  Include:
+    - 'app/**/*'
+
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*'
+
+Style/StringLiterals:
+  Enabled: true
+  EnforcedStyle: double_quotes
+  ConsistentQuotesInMultiline: false
+
+Layout/HashAlignment:
+  Enabled: true
+  AllowMultipleStyles: true
+  EnforcedHashRocketStyle: table
+  EnforcedColonStyle: table
+  EnforcedLastArgumentHashStyle: always_inspect
+
+Lint/MissingSuper:
+  Enabled: false
+
+RSpec/MultipleExpectations:
+  Max: 3
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 10

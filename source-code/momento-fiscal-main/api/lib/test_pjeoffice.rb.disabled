@@ -1,0 +1,37 @@
+# Test script for PJE Office REST endpoint
+require 'net/http'
+require 'json'
+
+# 1. Verificar o endpoint real
+uri = URI('https://sso.cloud.pje.jus.br/auth/realms/pje/pjeoffice-rest')
+puts "Testando endpoint: #{uri}"
+
+# Primeiro, fazer um GET para ver o que o endpoint retorna
+begin
+  response = Net::HTTP.get_response(uri)
+  puts "GET Response: #{response.code} - #{response.message}"
+  puts "Body: #{response.body[0..200] rescue 'empty'}"
+rescue => e
+  puts "GET Error: #{e.message}"
+end
+
+puts
+puts "---"
+puts
+
+# Agora testar um POST simples
+begin
+  http = Net::HTTP.new(uri.hostname, uri.port)
+  http.use_ssl = true
+  
+  req = Net::HTTP::Post.new(uri)
+  req['Content-Type'] = 'application/json'
+  req['versao'] = '2.5.16'
+  req.body = '{"test": true}'
+  
+  response = http.request(req)
+  puts "POST Response: #{response.code} - #{response.message}"
+  puts "Body: #{response.body[0..300] rescue 'empty'}"
+rescue => e
+  puts "POST Error: #{e.message}"
+end

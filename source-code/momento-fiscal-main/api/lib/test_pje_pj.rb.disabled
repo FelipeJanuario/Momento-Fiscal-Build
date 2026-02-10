@@ -1,0 +1,39 @@
+# Test PJE authentication with PJ (CNPJ) certificate
+require 'json'
+
+# Read PJ certificate from file
+pj_cert = File.read('/rails/pje_cert_pj_base64.txt').strip rescue nil
+pj_chain = File.read('/rails/pje_cert_pj_chain.json').strip rescue nil
+
+if pj_cert.nil? || pj_chain.nil?
+  puts "ERROR: Certificate files not found!"
+  puts "pj_cert: #{pj_cert.nil? ? 'NOT FOUND' : 'OK'}"
+  puts "pj_chain: #{pj_chain.nil? ? 'NOT FOUND' : 'OK'}"
+  exit 1
+end
+
+puts "=" * 60
+puts "Testing PJE Authentication with PJ Certificate"
+puts "=" * 60
+puts
+
+# Test with PJ certificate
+begin
+  service = AuthenticatePjeService.new(
+    pje_pfx: pj_cert,
+    password: 'Aspw500#22',
+    pje_cert_chain: pj_chain
+  )
+  
+  puts "Starting authentication..."
+  token = service.call
+  puts
+  puts "SUCCESS! Token obtained:"
+  puts token[0..100] + "..."
+  
+rescue => e
+  puts "ERROR: #{e.class} - #{e.message}"
+  puts
+  puts "This is expected if the certificate is not registered in PJE SSO."
+  puts "The 500 error means the server rejected our certificate."
+end

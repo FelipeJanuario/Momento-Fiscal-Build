@@ -1,0 +1,185 @@
+
+version: '3.7'
+
+x-api-config: &api-config
+  image: $APP_BACK_IMAGE
+  hostname: "{{.Node.Hostname}}.{{.Service.Name}}"
+  secrets:
+    - momento_fiscal_postgres_password
+    - momento_fiscal_secret_key_base
+    - momento_fiscal_smtp_password
+    - momento_fiscal_lockbox_master_key
+    - momento_fiscal_active_record_encryption_primary_key
+    - momento_fiscal_active_record_encryption_deterministic_key
+    - momento_fiscal_active_record_encryption_key_derivation_salt
+    - momento_fiscal_biddings_analyser_api_key
+    - momento_fiscal_stripe_secret_key
+    - momento_fiscal_pje_auth_pfx
+    - momento_fiscal_pje_auth_pfx_password
+    - momento_fiscal_pje_auth_certchain
+    - momento_fiscal_google_api_pfx_base64
+  depends_on:
+    - db
+    - redis
+
+x-api-variables: &api-variables
+  RAILS_ENV: production
+  RAILS_MAX_THREADS: 5
+  DATABASE_HOST: db
+  DATABASE_USER: postgres
+  SECRET_KEY_BASE_FILE: /run/secrets/momento_fiscal_secret_key_base
+  LOCKBOX_MASTER_KEY_FILE: /run/secrets/momento_fiscal_lockbox_master_key
+  DATABASE_PASSWORD_FILE: /run/secrets/momento_fiscal_postgres_password
+  PORT: 80
+  OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-momento-fiscal-api}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?missing env var OTEL_EXPORTER_OTLP_ENDPOINT}
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:?missing env var MAIL_SMTP_PORT}
+  MAIL_SMTP_LOGIN: ${MAIL_SMTP_LOGIN:?missing env var MAIL_SMTP_LOGIN}
+  MAIL_SMTP_DOMAIN: ${MAIL_SMTP_DOMAIN:?missing env var MAIL_SMTP_DOMAIN}
+  MAIL_SMTP_SSL: ${MAIL_SMTP_SSL}
+  MAIL_SMTP_PASSWORD_FILE: ${MAIL_SMTP_PASSWORD_FILE:?missing env var MAIL_SMTP_PASSWORD_FILE}
+  DOMAIN: ${APP_DOMAIN:?missing env var APP_DOMAIN}
+  ELASTICSEARCH_URL: http://opensearch:9200
+  ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY_FILE: ${ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY_FILE:?missing env var ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY_FILE}
+  ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY_FILE: ${ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY_FILE:?missing env var ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY_FILE}
+  ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT_FILE: ${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT_FILE:?missing env var ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT_FILE}
+  BIDDINGS_ANALYSER_URL: ${BIDDINGS_ANALYSER_URL:?missing env var BIDDINGS_ANALYSER_URL}
+  BIDDINGS_ANALYSER_API_KEY_FILE: ${BIDDINGS_ANALYSER_API_KEY_FILE:?missing env var BIDDINGS_ANALYSER_API_KEY_FILE}
+  STRIPE_SECRET_KEY_FILE: ${STRIPE_SECRET_KEY_FILE:?missing env var STRIPE_SECRET_KEY_FILE}
+  JUSBRASIL_API_TOKEN: ${JUSBRASIL_API_TOKEN:?missing env var JUSBRASIL_API_TOKEN}
+  SERPRO_CONSUMER_KEY: ${SERPRO_CONSUMER_KEY:?missing env var SERPRO_CONSUMER_KEY}
+  SERPRO_CONSUMER_SECRET: ${SERPRO_CONSUMER_SECRET:?missing env var SERPRO_CONSUMER_SECRET}
+  STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:?missing env var STRIPE_PUBLISHABLE_KEY}
+  PJE_AUTH_PFX_FILE: /run/secrets/momento_fiscal_pje_auth_pfx
+  PJE_AUTH_PFX_PASSWORD_FILE: /run/secrets/momento_fiscal_pje_auth_pfx_password
+  PJE_AUTH_CERTCHAIN_FILE: /run/secrets/momento_fiscal_pje_auth_certchain
+  GOOGLE_API_PFX_BASE64_FILE: /run/secrets/momento_fiscal_google_api_pfx_base64
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    deploy:
+      placement:
+        constraints:
+          - "node.role==manager"
+    command: redis-server
+    volumes:
+      - redis:/data
+    networks:
+      - app
+
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    deploy:
+      placement:
+        constraints:
+          - "node.role==manager"
+      resources:
+        limits:
+          cpus: '0.80'
+    networks:
+      - app
+    volumes:
+      - 'postgres:/var/lib/postgresql/data'
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/momento_fiscal_postgres_password
+      POSTGRES_USER: postgres
+      POSTGRES_DB: momento_fiscal_production
+    secrets:
+      - momento_fiscal_postgres_password
+      - momento_fiscal_smtp_password
+
+  backend:
+    <<: *api-config
+    restart: unless-stopped
+    hostname: "{{.Node.Hostname}}.{{.Service.Name}}"
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        window: 60s
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+        delay: 10s
+      rollback_config:
+        parallelism: 0
+        order: stop-first
+      placement:
+        constraints:
+          - "node.role==manager"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik-public"
+        - "traefik.constraint-label=traefik-public"
+        - "traefik.http.routers.momento-fiscal-back-http.rule=Host(`${APP_DOMAIN:?missing env var APP_DOMAIN}`) && PathPrefix(`/api/`)"
+        - "traefik.http.routers.momento-fiscal-back-http.priority=1003"
+        - "traefik.http.routers.momento-fiscal-back-http.entrypoints=http"
+        - "traefik.http.services.momento-fiscal-back.loadbalancer.server.port=80"
+    networks:
+      - app
+      - traefik-public
+    environment:
+      <<: *api-variables
+
+  sidekiq:
+    <<: *api-config
+    command: bundle exec sidekiq
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        window: 60s
+      placement:
+        constraints:
+          - "node.role==manager"
+    networks:
+      - app
+      - traefik-public # FIX: temporary, remove when we have a better way to fix sidekiq requests
+    environment:
+      <<: *api-variables
+
+networks:
+  app:
+    driver: overlay
+    internal: true
+  traefik-public:
+    external: true
+
+secrets:
+  momento_fiscal_secret_key_base:
+    external: true
+  momento_fiscal_postgres_password:
+    external: true
+  momento_fiscal_smtp_password:
+    external: true
+  momento_fiscal_lockbox_master_key:
+    external: true
+  momento_fiscal_active_record_encryption_primary_key:
+    external: true
+  momento_fiscal_active_record_encryption_deterministic_key:
+    external: true
+  momento_fiscal_active_record_encryption_key_derivation_salt:
+    external: true
+  momento_fiscal_biddings_analyser_api_key:
+    external: true
+  momento_fiscal_stripe_secret_key:
+    external: true
+  momento_fiscal_pje_auth_pfx:
+    external: true
+  momento_fiscal_pje_auth_pfx_password:
+    external: true
+  momento_fiscal_pje_auth_certchain:
+    external: true
+  momento_fiscal_google_api_pfx_base64:
+    external: true
+
+volumes:
+  postgres:
+  redis:

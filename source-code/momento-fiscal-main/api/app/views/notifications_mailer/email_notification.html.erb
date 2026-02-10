@@ -1,0 +1,17 @@
+<% if @notification.title.present? %>
+<h2><%= @notification.title %></h2>
+<% end %>
+
+<br>
+
+<p>Olá <%= @notification.user.name %>,</p>
+
+<br>
+
+<p><%= @notification.content %></p>
+
+<br>
+
+<% if @notification.redirect_to.present? %>
+<a href="<%= @notification.redirect_to %>">Clique aqui para acessar</a>
+<% end %>

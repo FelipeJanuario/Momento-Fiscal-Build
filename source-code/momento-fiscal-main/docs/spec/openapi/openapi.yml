@@ -1,0 +1,2332 @@
+openapi: 3.1.0
+info:
+  title: Momento Fiscal API
+  description: |
+    API completa do sistema Momento Fiscal - plataforma para análise fiscal e consultorias.
+    
+    Esta API fornece endpoints para:
+    - Autenticação e gerenciamento de usuários
+    - Gestão de instituições
+    - Consultorias e propostas
+    - Notificações
+    - Análise de licitações
+    - Integração com Stripe para pagamentos
+    - Consultas ao SERPRO
+    
+    ## Autenticação
+    A API utiliza JWT (JSON Web Tokens) para autenticação. Após o login, inclua o token no header:
+    `Authorization: Bearer <seu_token>`
+    
+    ## Paginação
+    Endpoints que retornam listas suportam paginação via parâmetros:
+    - `page`: número da página (padrão: 1)
+    - `per_page`: itens por página (padrão: 10)
+    
+  version: "v0.1.4"
+  contact:
+    name: Momento Fiscal Team
+    email: contato@momentofiscal.com.br
+    url: https://momentofiscal.com.br
+  license:
+    name: Proprietary
+  x-logo:
+    url: "https://momentofiscal.com.br/wp-content/uploads/2025/05/logo-momento-fiscal-v1.svg"
+    altText: "Momento Fiscal Logo"
+    href: "https://momentofiscal.com.br"
+  termsOfService: "https://momentofiscal.com.br/lgpd/"
+
+servers:
+  - url: http://localhost:3000
+    description: Servidor de desenvolvimento
+  - url: https://momentofiscal.spezi.com.br
+    description: Servidor de produção
+
+tags:
+  - name: Health
+    description: Verificação de saúde do sistema
+  - name: Authentication
+    description: Autenticação e gerenciamento de sessões
+  - name: Users
+    description: Operações com usuários
+  - name: Institutions
+    description: Gestão de instituições
+  - name: User Institutions
+    description: Tabela associativa entre usuários e instituições
+  - name: Consultings
+    description: Gerenciamento de consultorias
+  - name: Consulting Proposals
+    description: Propostas de consultoria
+  - name: Notifications
+    description: Sistema de notificações
+  - name: Invitations
+    description: Convites de usuários
+  - name: Free Plan Usage
+    description: Controle de uso do plano gratuito
+  - name: Biddings Analyser
+    description: Análise de licitações e empresas
+  - name: SERPRO
+    description: Consultas ao SERPRO
+  - name: Processes
+    description: Processos judiciais
+
+paths:
+  # Health Check
+  /api/health/up:
+    get:
+      tags:
+        - Health
+      summary: Verificação de saúde do sistema
+      description: Endpoint para verificar se a API está funcionando corretamente
+      responses:
+        '200':
+          description: Sistema funcionando normalmente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          description: Erro interno do servidor
+
+  # Authentication Endpoints
+  /api/v1/authentication/users/sign_in:
+    post:
+      tags:
+        - Authentication
+      summary: Login de usuário
+      description: Autentica um usuário e retorna um token JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user
+              properties:
+                user:
+                  type: object
+                  required:
+                    - identity
+                    - password
+                  properties:
+                    identity:
+                      type: string
+                      example: "12345678900"
+                    password:
+                      type: string
+                      format: password
+                      example: "minhasenha123"
+      responses:
+        '200':
+          description: Login realizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationResponse'
+        '401':
+          description: Credenciais inválidas
+        '404':
+          description: Usuário não encontrado
+
+  /api/v1/authentication/users/sign_out:
+    delete:
+      tags:
+        - Authentication
+      summary: Logout de usuário
+      description: Encerra a sessão do usuário autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout realizado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Signed out successfully"
+
+  /api/v1/authentication/users:
+    post:
+      tags:
+        - Authentication
+      summary: Registro de usuário
+      description: Registra um novo usuário no sistema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user
+              properties:
+                user:
+                  $ref: '#/components/schemas/UserRegistrationInput'
+      responses:
+        '201':
+          description: Usuário criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '422':
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrors'
+
+  # Users CRUD
+  /api/v1/users:
+    get:
+      tags:
+        - Users
+      summary: Listar usuários
+      description: Retorna uma lista paginada de usuários
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/QueryParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Lista de usuários
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersListResponse'
+    post:
+      tags:
+        - Users
+      summary: Criar usuário
+      description: Cria um novo usuário no sistema
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user
+              properties:
+                user:
+                  $ref: '#/components/schemas/UserUpdateInput'
+      responses:
+        '201':
+          description: Usuário criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '422':
+          description: Dados inválidos
+
+  /api/v1/users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Obter usuário
+      description: Retorna os detalhes de um usuário específico
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do usuário
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalhes do usuário
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: Usuário não encontrado
+    patch:
+      tags:
+        - Users
+      summary: Atualizar usuário
+      description: Atualiza os dados de um usuário
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do usuário
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user
+              properties:
+                user:
+                  $ref: '#/components/schemas/UserUpdateInput'
+      responses:
+        '200':
+          description: Usuário atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '422':
+          description: Dados inválidos
+    delete:
+      tags:
+        - Users
+      summary: Excluir usuário
+      description: Remove um usuário do sistema
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do usuário
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Usuário excluído com sucesso
+        '404':
+          description: Usuário não encontrado
+
+  # Institutions
+  /api/v1/institutions:
+    get:
+      tags:
+        - Institutions
+      summary: Listar instituições
+      description: Retorna uma lista paginada de instituições
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/QueryParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Lista de instituições
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstitutionsListResponse'
+    post:
+      tags:
+        - Institutions
+      summary: Criar instituição
+      description: Cria uma nova instituição junto com usuário responsável
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - institution
+                - user
+              properties:
+                institution:
+                  $ref: '#/components/schemas/InstitutionInput'
+                user:
+                  $ref: '#/components/schemas/UserInput'
+      responses:
+        '201':
+          description: Instituição criada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstitutionResponse'
+        '422':
+          description: Dados inválidos
+
+  /api/v1/institutions/{id}:
+    get:
+      tags:
+        - Institutions
+      summary: Obter instituição
+      description: Retorna os detalhes de uma instituição específica
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da instituição
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalhes da instituição
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstitutionResponse'
+        '404':
+          description: Instituição não encontrada
+    patch:
+      tags:
+        - Institutions
+      summary: Atualizar instituição
+      description: Atualiza os dados de uma instituição
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da instituição
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - institution
+              properties:
+                institution:
+                  $ref: '#/components/schemas/InstitutionInput'
+      responses:
+        '200':
+          description: Instituição atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstitutionResponse'
+        '422':
+          description: Dados inválidos
+    delete:
+      tags:
+        - Institutions
+      summary: Excluir instituição
+      description: Remove uma instituição do sistema
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da instituição
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Instituição excluída com sucesso
+        '404':
+          description: Instituição não encontrada
+
+  # Consultings
+  /api/v1/consultings:
+    get:
+      tags:
+        - Consultings
+      summary: Listar consultorias
+      description: Retorna uma lista paginada de consultorias
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/QueryParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Lista de consultorias
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultingsListResponse'
+    post:
+      tags:
+        - Consultings
+      summary: Criar consultoria
+      description: Cria uma nova consultoria
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - consulting
+              properties:
+                consulting:
+                  $ref: '#/components/schemas/ConsultingInput'
+      responses:
+        '201':
+          description: Consultoria criada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultingResponse'
+        '422':
+          description: Dados inválidos
+
+  /api/v1/consultings/{id}:
+    get:
+      tags:
+        - Consultings
+      summary: Obter consultoria
+      description: Retorna os detalhes de uma consultoria específica
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da consultoria
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes da consultoria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultingResponse'
+        '404':
+          description: Consultoria não encontrada
+    patch:
+      tags:
+        - Consultings
+      summary: Atualizar consultoria
+      description: Atualiza os dados de uma consultoria
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da consultoria
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - consulting
+              properties:
+                consulting:
+                  $ref: '#/components/schemas/ConsultingInput'
+      responses:
+        '200':
+          description: Consultoria atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultingResponse'
+        '422':
+          description: Dados inválidos
+    delete:
+      tags:
+        - Consultings
+      summary: Excluir consultoria
+      description: Remove uma consultoria do sistema
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da consultoria
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Consultoria excluída com sucesso
+        '404':
+          description: Consultoria não encontrada
+
+  /api/v1/consultings/{import_hash}/import:
+    post:
+      tags:
+        - Consultings
+      summary: Importar consultoria
+      description: Importa uma consultoria usando hash de importação
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: import_hash
+          in: path
+          required: true
+          description: Hash de importação da consultoria
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Consultoria importada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultingResponse'
+        '404':
+          description: Consultoria não encontrada
+
+  # Notifications
+  /api/v1/notifications:
+    get:
+      tags:
+        - Notifications
+      summary: Listar notificações
+      description: Retorna uma lista paginada de notificações do usuário atual
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/QueryParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Lista de notificações
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationsListResponse'
+
+  /api/v1/notifications/{id}:
+    get:
+      tags:
+        - Notifications
+      summary: Obter notificação
+      description: Retorna os detalhes de uma notificação específica
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da notificação
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalhes da notificação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+        '404':
+          description: Notificação não encontrada
+    delete:
+      tags:
+        - Notifications
+      summary: Excluir notificação
+      description: Remove uma notificação do usuário
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da notificação
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Notificação excluída com sucesso
+        '404':
+          description: Notificação não encontrada
+
+  # Biddings Analyser
+  /api/v1/biddings_analyser/download:
+    get:
+      tags:
+        - Biddings Analyser
+      summary: Download de arquivo
+      description: Redireciona para download de arquivo do analisador de licitações
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: file_id
+          in: query
+          required: true
+          description: ID do arquivo para download
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirecionamento para download
+        '404':
+          description: Arquivo não encontrado
+
+  /api/v1/biddings_analyser/debts:
+    get:
+      tags:
+        - Biddings Analyser
+      summary: Consultar dívidas
+      description: Busca informações sobre dívidas no sistema de análise de licitações
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: _id
+          in: query
+          description: ID da dívida
+          schema:
+            type: string
+        - name: cpf_cnpj
+          in: query
+          description: CPF ou CNPJ do devedor
+          schema:
+            type: string
+        - name: registration_status
+          in: query
+          description: Status de registro
+          schema:
+            type: string
+        - name: registration_status_type
+          in: query
+          description: Tipo de status de registro
+          schema:
+            type: string
+        - name: debted_name
+          in: query
+          description: Nome do devedor
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Número da página
+          schema:
+            type: integer
+        - name: page_size
+          in: query
+          description: Tamanho da página
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de dívidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DebtsListResponse'
+
+  /api/v1/biddings_analyser/debts/{cpf_cnpj}/debts_per_debted_name:
+    get:
+      tags:
+        - Biddings Analyser
+      summary: Resumo de dívidas por nome do devedor
+      description: |
+        Retorna a soma (debts_value) e a contagem (debts_count) de dívidas agrupadas por
+        debted_name para um CPF/CNPJ informado. Os resultados são ordenados por debted_name.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cpf_cnpj
+          in: path
+          required: true
+          description: CPF ou CNPJ do devedor
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista agregada de dívidas por devedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DebtsPerDebtedNameListResponse'
+
+  /api/v1/biddings_analyser/companies:
+    get:
+      tags:
+        - Biddings Analyser
+      summary: Listar empresas
+      description: Busca informações sobre empresas no sistema de análise
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: Termo de busca
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Número da página
+          schema:
+            type: integer
+        - name: page_size
+          in: query
+          description: Tamanho da página
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de empresas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompaniesListResponse'
+
+  /api/v1/biddings_analyser/companies/count_in_location:
+    get:
+      tags:
+        - Biddings Analyser
+      summary: Contar empresas por localização
+      description: |
+        Retorna a contagem de empresas dentro de uma área retangular (bounding box).
+        Informe os dois pontos (cantos opostos) usando coordenadas [longitude, latitude].
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: starting_point
+          in: query
+          required: true
+          description: Primeiro ponto (canto) do retângulo de consulta no formato [longitude, latitude]
+          style: form
+          explode: true
+          schema:
+            type: array
+            minItems: 2
+            maxItems: 2
+            items:
+              type: number
+              format: double
+          examples:
+            exemplo:
+              value: [-46.7000, -23.6000]
+        - name: ending_point
+          in: query
+          required: true
+          description: Segundo ponto (canto oposto) do retângulo de consulta no formato [longitude, latitude]
+          style: form
+          explode: true
+          schema:
+            type: array
+            minItems: 2
+            maxItems: 2
+            items:
+              type: number
+              format: double
+          examples:
+            exemplo:
+              value: [-46.3000, -23.3000]
+      responses:
+        '200':
+          description: Contagem de empresas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+
+  /api/v1/biddings_analyser/companies/in_location:
+    get:
+      tags:
+        - Biddings Analyser
+      summary: Empresas por localização
+      description: |
+        Lista empresas localizadas dentro de uma área retangular (bounding box),
+        com ordenação por `debts_value` desc e suporte a filtros e paginação.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: starting_point
+          in: query
+          required: true
+          description: Primeiro ponto (canto) do retângulo de consulta no formato [longitude, latitude]
+          style: form
+          explode: true
+          schema:
+            type: array
+            minItems: 2
+            maxItems: 2
+            items:
+              type: number
+              format: double
+          examples:
+            exemplo:
+              value: [-46.7000, -23.6000]
+        - name: ending_point
+          in: query
+          required: true
+          description: Segundo ponto (canto oposto) do retângulo de consulta no formato [longitude, latitude]
+          style: form
+          explode: true
+          schema:
+            type: array
+            minItems: 2
+            maxItems: 2
+            items:
+              type: number
+              format: double
+          examples:
+            exemplo:
+              value: [-46.3000, -23.3000]
+        - name: page
+          in: query
+          description: Número da página
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: Tamanho da página
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+        - name: min_debts_value
+          in: query
+          description: Valor mínimo de `debts_value` (filtro gte)
+          schema:
+            type: number
+            format: float
+        - name: _id
+          in: query
+          description: Filtro por ID interno (Mongo `_id`)
+          schema:
+            type: string
+        - name: cnpj
+          in: query
+          description: Filtro por CNPJ (somente números)
+          schema:
+            type: string
+            pattern: '^\d{14}$'
+        - name: debts_value
+          in: query
+          description: "Filtros por campo `debts_value` usando notação de objeto (exemplo: debts_value[gte]=1000)"
+          style: deepObject
+          explode: true
+          schema:
+            type: object
+            properties:
+              gte:
+                type: number
+                format: float
+              lte:
+                type: number
+                format: float
+              eq:
+                type: number
+                format: float
+      responses:
+        '200':
+          description: Lista de empresas na localização
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompaniesListResponse'
+
+  # SERPRO
+  /api/v1/consulta_cpf/{cpf}:
+    get:
+      tags:
+        - SERPRO
+      summary: Consultar CPF
+      description: Realiza consulta de CPF no SERPRO
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cpf
+          in: path
+          required: true
+          description: CPF para consulta (apenas números)
+          schema:
+            type: string
+            pattern: '^\d{11}$'
+      responses:
+        '200':
+          description: Dados do CPF consultado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SerproCpfResponse'
+        '404':
+          description: CPF não encontrado
+
+  # Processes
+  /api/v1/processes:
+    get:
+      tags:
+        - Processes
+      summary: Consultar processos
+      description: Consulta processos judiciais
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de processos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessesListResponse'
+
+  # # Stripe Integration
+  # /api/v1/stripe/create_setup_intent:
+  #   post:
+  #     tags:
+  #       - Stripe
+  #     summary: Criar Setup Intent
+  #     description: Cria um Setup Intent para configurar método de pagamento
+  #     security:
+  #       - bearerAuth: []
+  #     responses:
+  #       '200':
+  #         description: Setup Intent criado
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+
+  # /api/v1/stripe/create_payment_intent:
+  #   post:
+  #     tags:
+  #       - Stripe
+  #     summary: Criar Payment Intent
+  #     description: Cria um Payment Intent para processar pagamento
+  #     security:
+  #       - bearerAuth: []
+  #     responses:
+  #       '200':
+  #         description: Payment Intent criado
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+
+  # /api/v1/stripe/setup_intents:
+  #   get:
+  #     tags:
+  #       - Stripe
+  #     summary: Listar Setup Intents
+  #     description: Lista todos os Setup Intents do usuário
+  #     security:
+  #       - bearerAuth: []
+  #     responses:
+  #       '200':
+  #         description: Lista de Setup Intents
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+
+  # /api/v1/stripe/payment_methods:
+  #   get:
+  #     tags:
+  #       - Stripe
+  #     summary: Listar métodos de pagamento
+  #     description: Lista todos os métodos de pagamento do usuário
+  #     security:
+  #       - bearerAuth: []
+  #     responses:
+  #       '200':
+  #         description: Lista de métodos de pagamento
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+
+  # /api/v1/stripe/payment_methods/{id}:
+  #   delete:
+  #     tags:
+  #       - Stripe
+  #     summary: Remover método de pagamento
+  #     description: Remove um método de pagamento específico
+  #     security:
+  #       - bearerAuth: []
+  #     parameters:
+  #       - name: id
+  #         in: path
+  #         required: true
+  #         description: ID do método de pagamento
+  #         schema:
+  #           type: string
+  #     responses:
+  #       '204':
+  #         description: Método de pagamento removido
+  #       '404':
+  #         description: Método de pagamento não encontrado
+
+  # /api/v1/stripe/subscriptions:
+  #   get:
+  #     tags:
+  #       - Stripe
+  #     summary: Listar assinaturas
+  #     description: Lista todas as assinaturas do usuário
+  #     security:
+  #       - bearerAuth: []
+  #     responses:
+  #       '200':
+  #         description: Lista de assinaturas
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #   post:
+  #     tags:
+  #       - Stripe
+  #     summary: Criar assinatura
+  #     description: Cria uma nova assinatura
+  #     security:
+  #       - bearerAuth: []
+  #     responses:
+  #       '201':
+  #         description: Assinatura criada
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #   patch:
+  #     tags:
+  #       - Stripe
+  #     summary: Atualizar assinatura
+  #     description: Atualiza uma assinatura existente
+  #     security:
+  #       - bearerAuth: []
+  #     responses:
+  #       '200':
+  #         description: Assinatura atualizada
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+
+  # /api/v1/stripe/current_subscription:
+  #   get:
+  #     tags:
+  #       - Stripe
+  #     summary: Assinatura atual
+  #     description: Retorna a assinatura atual do usuário
+  #     security:
+  #       - bearerAuth: []
+  #     responses:
+  #       '200':
+  #         description: Assinatura atual
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+
+  # /api/v1/stripe/enabled_features:
+  #   get:
+  #     tags:
+  #       - Stripe
+  #     summary: Funcionalidades habilitadas
+  #     description: Lista funcionalidades habilitadas para o usuário
+  #     security:
+  #       - bearerAuth: []
+  #     responses:
+  #       '200':
+  #         description: Lista de funcionalidades
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+
+  # /api/v1/stripe/subscriptions/{id}:
+  #   delete:
+  #     tags:
+  #       - Stripe
+  #     summary: Cancelar assinatura
+  #     description: Cancela uma assinatura específica
+  #     security:
+  #       - bearerAuth: []
+  #     parameters:
+  #       - name: id
+  #         in: path
+  #         required: true
+  #         description: ID da assinatura
+  #         schema:
+  #           type: string
+  #     responses:
+  #       '204':
+  #         description: Assinatura cancelada
+  #       '404':
+  #         description: Assinatura não encontrada
+
+  # /api/v1/stripe/products:
+  #   get:
+  #     tags:
+  #       - Stripe
+  #     summary: Listar produtos
+  #     description: Lista todos os produtos disponíveis
+  #     security:
+  #       - bearerAuth: []
+  #     responses:
+  #       '200':
+  #         description: Lista de produtos
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+
+  # /api/v1/stripe/products/{product_id}/prices:
+  #   get:
+  #     tags:
+  #       - Stripe
+  #     summary: Listar preços de produto
+  #     description: Lista preços para um produto específico
+  #     security:
+  #       - bearerAuth: []
+  #     parameters:
+  #       - name: product_id
+  #         in: path
+  #         required: true
+  #         description: ID do produto
+  #         schema:
+  #           type: string
+  #     responses:
+  #       '200':
+  #         description: Lista de preços
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Token JWT obtido através do endpoint de login.
+        Formato: `Bearer <token>`
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: "Número da página para paginação (padrão: 1)"
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPageParam:
+      name: per_page
+      in: query
+      description: "Número de itens por página (padrão: 25, máximo: 100)"
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+
+    QueryParam:
+      name: query
+      in: query
+      description: "Termo de busca para filtrar resultados"
+      schema:
+        type: object
+        properties:
+          "[key]": # Replace [key] with actual searchable fields as needed
+            type: string
+            example: "termo de busca"
+
+  schemas:
+    # Company Schemas
+    Company:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nome fantasia da empresa
+          example: "Momento Fiscal LTDA"
+        corporate_name:
+          type: string
+          description: Razão social
+          example: "Momento Fiscal Tecnologia LTDA"
+        cnpj:
+          type: string
+          description: CNPJ completo (14 dígitos)
+          pattern: '^\d{14}$'
+          example: "12345678000195"
+        base_cnpj:
+          type: string
+          description: Base do CNPJ (8 primeiros dígitos)
+          example: "12345678"
+        order_cnpj:
+          type: string
+          description: Ordem do CNPJ (4 dígitos)
+          example: "0001"
+        dv_cnpj:
+          type: string
+          description: Dígitos verificadores do CNPJ (2 dígitos)
+          example: "95"
+        fantasy_name:
+          type: string
+          description: Alias de name
+          example: "Momento Fiscal"
+
+        # Company fields
+        juridical_nature:
+          type: string
+          example: "206-2 - Sociedade Empresária Limitada"
+        qualification:
+          type: string
+          example: "Administrador"
+        social_capital:
+          type: string
+          example: "50000.00"
+        responsible_federal_entity:
+          type: string
+          example: "Receita Federal"
+
+        # Establishment fields
+        matrix:
+          type: boolean
+          default: false
+        branch:
+          type: boolean
+          default: false
+        cadastral_status_date:
+          type: string
+          format: date
+          example: "2023-05-10"
+        cadastral_status_reason:
+          type: string
+          example: "Ativa"
+        city_name:
+          type: string
+          example: "São Paulo"
+        foreign_city_name:
+          type: string
+          description: Nome da cidade estrangeira, se aplicável
+          nullable: true
+        activity_start_date:
+          type: string
+          format: date
+          example: "2020-01-01"
+        main_cnae:
+          type: string
+          example: "6201-5/01"
+        secondary_cnae:
+          type: string
+          description: Códigos CNAE secundários separados por vírgula
+          example: "6202-3/00, 6311-9/00"
+        email:
+          type: string
+          format: email
+          example: "contato@empresa.com.br"
+        special_status:
+          type: string
+          nullable: true
+        special_status_date:
+          type: string
+          format: date
+          nullable: true
+        uf:
+          type: string
+          example: "SP"
+        municipality_code:
+          type: string
+          description: Código do município (IBGE)
+          example: "3550308"
+        special_situation:
+          type: string
+          nullable: true
+        special_situation_date:
+          type: string
+          format: date
+          nullable: true
+
+        # Simple fields
+        simple:
+          type: boolean
+          nullable: true
+        simple_date:
+          type: string
+          format: date
+          nullable: true
+        simple_exclusion_date:
+          type: string
+          format: date
+          nullable: true
+        mei:
+          type: boolean
+          nullable: true
+        mei_date:
+          type: string
+          format: date
+          nullable: true
+        mei_exclusion_date:
+          type: string
+          format: date
+          nullable: true
+
+        # Debt cache fields
+        debts_count:
+          type: integer
+          default: 0
+          example: 0
+        debts_value:
+          type: number
+          format: float
+          default: 0.0
+          example: 0.0
+        debts_cache_updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CompaniesListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/Company'
+    # Health Response
+    HealthResponse:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "momento_fiscal"
+        hostname:
+          type: string
+          example: "servidor-001"
+        pid:
+          type: integer
+          example: 12345
+        parent_id:
+          type: integer
+          example: 1
+        platform:
+          type: object
+          properties:
+            name:
+              type: string
+              example: "rails"
+            version:
+              type: string
+              example: "7.1.0"
+
+    # User Schemas
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          example: "João Silva"
+        email:
+          type: string
+          format: email
+          example: "joao.silva@exemplo.com"
+        cpf:
+          type: string
+          pattern: '^\d{11}$'
+          example: "12345678901"
+        phone:
+          type: string
+          pattern: '^\(\d{2}\)\s\d{4,5}-\d{4}$'
+          example: "(11) 99999-9999"
+        birth_date:
+          type: string
+          format: date
+          example: "1990-01-15"
+        sex:
+          type: string
+          enum: [male, female, other]
+          example: "male"
+        role:
+          type: string
+          enum: [client, consultant, admin]
+          example: "client"
+        oab_subscription:
+          type: string
+          example: "123456"
+          nullable: true
+        oab_state:
+          type: string
+          example: "SP"
+          nullable: true
+        admin:
+          type: boolean
+          example: false
+        ios_plan:
+          type: boolean
+          example: false
+        stripe_customer_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    UserInput:
+      type: object
+      required:
+        - name
+        - email
+        - cpf
+        - phone
+        - birth_date
+        - sex
+        - password
+        - password_confirmation
+      properties:
+        name:
+          type: string
+          example: "João Silva"
+        email:
+          type: string
+          format: email
+          example: "joao.silva@exemplo.com"
+        cpf:
+          type: string
+          pattern: '^\d{11}$'
+          example: "12345678901"
+        phone:
+          type: string
+          pattern: '^\(\d{2}\)\s\d{4,5}-\d{4}$'
+          example: "(11) 99999-9999"
+        birth_date:
+          type: string
+          format: date
+          example: "1990-01-15"
+        sex:
+          type: string
+          enum: [male, female, other]
+          example: "male"
+        ios_plan:
+          type: boolean
+          example: false
+        password:
+          type: string
+          format: password
+          minLength: 6
+          example: "senhasegura123"
+        password_confirmation:
+          type: string
+          format: password
+          example: "senhasegura123"
+
+    UserRegistrationInput:
+      type: object
+      required:
+        - name
+        - email
+        - cpf
+        - phone
+        - birth_date
+        - sex
+        - oab_subscription
+        - oab_state
+        - password
+        - password_confirmation
+      properties:
+        name:
+          type: string
+          example: "João Silva"
+        email:
+          type: string
+          format: email
+          example: "joao.silva@exemplo.com"
+        cpf:
+          type: string
+          pattern: '^\d{11}$'
+          example: "12345678901"
+        phone:
+          type: string
+          pattern: '^\(\d{2}\)\s\d{4,5}-\d{4}$'
+          example: "(11) 99999-9999"
+        birth_date:
+          type: string
+          format: date
+          example: "1990-01-15"
+        sex:
+          type: string
+          enum: [male, female, other]
+          example: "male"
+        oab_subscription:
+          type: string
+          example: "123456"
+          nullable: true
+        oab_state:
+          type: string
+          example: "SP"
+          nullable: true
+        ios_plan:
+          type: boolean
+          example: false
+        password:
+          type: string
+          format: password
+          minLength: 6
+          example: "senhasegura123"
+        password_confirmation:
+          type: string
+          format: password
+          example: "senhasegura123"
+
+    UserUpdateInput:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "João Silva Santos"
+        email:
+          type: string
+          format: email
+          example: "joao.santos@exemplo.com"
+        cpf:
+          type: string
+          pattern: '^\d{11}$'
+          example: "12345678901"
+        phone:
+          type: string
+          pattern: '^\(\d{2}\)\s\d{4,5}-\d{4}$'
+          example: "(11) 99999-9999"
+        birth_date:
+          type: string
+          format: date
+          example: "1990-01-15"
+        sex:
+          type: string
+          enum: [male, female, other]
+          example: "male"
+        ios_plan:
+          type: boolean
+          example: false
+        role:
+          type: string
+          enum: [client, consultant, admin]
+          example: "consultant"
+
+    UserResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+
+    UsersListResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        pagination_params:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # Institution Schemas
+    Institution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        cnpj:
+          type: string
+          pattern: '^\d{14}$'
+          example: "12345678000195"
+        responsible_name:
+          type: string
+          example: "Maria Santos"
+        responsible_cpf:
+          type: string
+          pattern: '^\d{11}$'
+          example: "98765432100"
+        email:
+          type: string
+          format: email
+          example: "contato@instituicao.com.br"
+        phone:
+          type: string
+          pattern: '^\(\d{2}\)\s\d{4,5}-\d{4}$'
+          example: "(11) 3333-4444"
+        cell_phone:
+          type: string
+          pattern: '^\(\d{2}\)\s\d{4,5}-\d{4}$'
+          example: "(11) 99999-8888"
+        limit_debt:
+          type: number
+          format: decimal
+          example: 50000.00
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    InstitutionInput:
+      type: object
+      required:
+        - cnpj
+        - responsible_name
+        - responsible_cpf
+        - email
+        - phone
+        - cell_phone
+        - limit_debt
+      properties:
+        cnpj:
+          type: string
+          pattern: '^\d{14}$'
+          example: "12345678000195"
+        responsible_name:
+          type: string
+          example: "Maria Santos"
+        responsible_cpf:
+          type: string
+          pattern: '^\d{11}$'
+          example: "98765432100"
+        email:
+          type: string
+          format: email
+          example: "contato@instituicao.com.br"
+        phone:
+          type: string
+          pattern: '^\(\d{2}\)\s\d{4,5}-\d{4}$'
+          example: "(11) 3333-4444"
+        cell_phone:
+          type: string
+          pattern: '^\(\d{2}\)\s\d{4,5}-\d{4}$'
+          example: "(11) 99999-8888"
+        limit_debt:
+          type: number
+          format: decimal
+          example: 50000.00
+
+    InstitutionResponse:
+      type: object
+      properties:
+        institution:
+          $ref: '#/components/schemas/Institution'
+
+    InstitutionsListResponse:
+      type: object
+      properties:
+        institutions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Institution'
+        pagination_params:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # Consulting Schemas
+    Consulting:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        status:
+          type: string
+          enum: [not_started, waiting, approved, in_progress, finished, failed, waiting_for_user_creation]
+          example: "not_started"
+        value:
+          type: number
+          format: decimal
+          example: 1500.00
+        debts_count:
+          type: integer
+          example: 5
+          nullable: true
+        sent_at:
+          type: string
+          format: time
+          example: "14:30:00"
+        is_favorite:
+          type: boolean
+          example: false
+        import_hash:
+          type: string
+          example: "ABC123"
+          nullable: true
+        client_id:
+          type: string
+          format: uuid
+          nullable: true
+        consultant_id:
+          type: string
+          format: uuid
+          nullable: true
+        client:
+          $ref: '#/components/schemas/User'
+          nullable: true
+        consultant:
+          $ref: '#/components/schemas/User'
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    ConsultingInput:
+      type: object
+      required:
+        - status
+        - value
+        - sent_at
+      properties:
+        status:
+          type: string
+          enum: [not_started, waiting, approved, in_progress, finished, failed, waiting_for_user_creation]
+          example: "not_started"
+        value:
+          type: number
+          format: decimal
+          minimum: 0
+          example: 1500.00
+        debts_count:
+          type: integer
+          example: 5
+        sent_at:
+          type: string
+          format: time
+          example: "14:30:00"
+        is_favorite:
+          type: boolean
+          example: false
+        client_id:
+          type: string
+          format: uuid
+          nullable: true
+        consultant_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    ConsultingResponse:
+      type: object
+      properties:
+        consulting:
+          $ref: '#/components/schemas/Consulting'
+
+    ConsultingsListResponse:
+      type: object
+      properties:
+        consultings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Consulting'
+        pagination_params:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # Notification Schemas
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        user_id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        title:
+          type: string
+          example: "Nova consultoria disponível"
+        content:
+          type: string
+          example: "Uma nova consultoria foi adicionada ao sistema"
+        redirect_to:
+          type: string
+          example: "/consultings/1"
+          nullable: true
+        read_at:
+          type: string
+          format: time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    NotificationResponse:
+      type: object
+      properties:
+        notification:
+          $ref: '#/components/schemas/Notification'
+
+    NotificationsListResponse:
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        pagination_params:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # Debt Schemas
+    Debt:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: "ID da dívida"
+          example: "507f1f77bcf86cd799439011"
+        cpf_cnpj:
+          type: string
+          description: "CPF ou CNPJ do devedor"
+          example: "12345678901"
+        debted_person_type:
+          type: string
+          description: "Tipo de pessoa do devedor"
+          example: "PF"
+        debted_type:
+          type: string
+          description: "Tipo do devedor"
+          example: "principal"
+        debted_name:
+          type: string
+          description: "Nome do devedor"
+          example: "Empresa XYZ LTDA"
+        debt_state:
+          type: string
+          description: "UF da dívida"
+          example: "SP"
+        responsible_unit:
+          type: string
+          description: "Unidade responsável"
+          example: "SRF-SP"
+        registration_number:
+          type: string
+          description: "Número de inscrição"
+          example: "1234567890"
+        registration_status_type:
+          type: string
+          description: "Tipo do status de registro"
+          example: "ativo"
+        registration_status:
+          type: string
+          description: "Status de registro"
+          example: "regular"
+        main_revenue:
+          type: string
+          description: "Receita principal"
+          example: "Imposto de Renda"
+        registration_date:
+          type: string
+          format: date
+          description: "Data de registro"
+          example: "2024-01-15"
+        judicial_indicator:
+          type: string
+          description: "Indicador judicial"
+          example: "N"
+        credit_type:
+          type: string
+          description: "Tipo de crédito"
+          example: "tributário"
+        fgts_responsible_entity:
+          type: string
+          description: "Entidade responsável pelo FGTS"
+          example: "CEF"
+        fgts_unit_subscription:
+          type: string
+          description: "Inscrição da unidade FGTS"
+          example: "SP-001"
+        value:
+          type: number
+          format: decimal
+          description: "Valor da dívida"
+          example: 1000.50
+
+    DebtsListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/Debt'
+
+    # Debts aggregation by debted_name
+    DebtsPerDebtedNameItem:
+      type: object
+      description: Item agregado de dívidas por nome do devedor
+      properties:
+        debted_name:
+          type: string
+          description: Nome do devedor
+          example: "ACME LTDA"
+        debts_value:
+          type: number
+          description: Soma dos valores das dívidas do devedor
+          example: 12345.67
+        debts_count:
+          type: integer
+          description: Quantidade de dívidas do devedor
+          example: 3
+
+    DebtsPerDebtedNameListResponse:
+      type: array
+      description: Lista agregada de dívidas agrupadas por nome do devedor
+      items:
+        $ref: '#/components/schemas/DebtsPerDebtedNameItem'
+
+    # Authentication Response
+    AuthenticationResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    # Common Schemas
+    PaginationInfo:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 150
+
+    ValidationErrors:
+      type: object
+      properties:
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            email: ["já está em uso"]
+            password: ["é muito curto (mínimo: 6 caracteres)"]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+
+    # SERPRO Schemas
+    SerproCpfResponse:
+      type: object
+      description: Resposta da consulta de CPF no SERPRO
+      properties:
+        numeroInscricao:
+          type: string
+    # Processes Schemas
+    ProcessesListResponse:
+      type: object
+      description: Resposta paginada de processos judiciais
+      properties:
+        total:
+          type: integer
+          example: 2
+        numberOfElements:
+          type: integer
+          example: 20
+        maxElementsSize:
+          type: integer
+          example: 100
+        searchAfter:
+          type: array
+          items:
+            oneOf:
+              - type: string
+              - type: integer
+          example: ["1585827783000", "01348152520198060001"]
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessItem'
+
+    ProcessItem:
+      type: object
+      properties:
+        numeroProcesso:
+          type: string
+          example: "0027578-24.2022.8.06.0001"
+        nivelSigilo:
+          type: integer
+          example: 0
+        idCodexTribunal:
+          type: integer
+          example: 0
+        siglaTribunal:
+          type: string
+          example: "TJCE"
+        tramitacoes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tramitacao'
+        ativo:
+          type: boolean
+          example: true
+        orgaoJulgador:
+          $ref: '#/components/schemas/OrgaoJulgador'
+        idFonteDadosCodex:
+          type: integer
+          example: 1288
+        permitePeticionar:
+          type: boolean
+          example: true
+
+    OrgaoJulgador:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 8632
+        nome:
+          type: string
+          example: "7ª VARA DA FAZENDA PUBLICA DA COMARCA DE FORTALEZA"
+
+    Tramitacao:
+      type: object
+      properties:
+        idCodex:
+          type: integer
+          example: 0
+        tribunal:
+          $ref: '#/components/schemas/TribunalInfo'
+        grau:
+          $ref: '#/components/schemas/GrauInfo'
+        liminar:
+          type: boolean
+          example: false
+        nivelSigilo:
+          type: integer
+          example: 0
+        valorAcao:
+          type: number
+          format: double
+          example: 294650000.0
+        dataHoraUltimaDistribuicao:
+          type: string
+          format: date-time
+          example: "2022-07-04T14:19:19"
+        classe:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodigoDescricao'
+        assunto:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssuntoItem'
+        ultimoMovimento:
+          $ref: '#/components/schemas/UltimoMovimento'
+        partes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Parte'
+
+    TribunalInfo:
+      type: object
+      properties:
+        sigla:
+          type: string
+          example: "TJCE"
+        nome:
+          type: string
+          example: "Tribunal de Justiça do Estado do Ceará"
+        segmento:
+          type: string
+          example: "JUSTICA_ESTADUAL"
+        jtr:
+          type: string
+          example: "806"
+
+    GrauInfo:
+      type: object
+      properties:
+        sigla:
+          type: string
+          example: "G1"
+        nome:
+          type: string
+          example: "1° Grau"
+        numero:
+          type: integer
+          example: 1
+
+    CodigoDescricao:
+      type: object
+      properties:
+        codigo:
+          type: integer
+          example: 65
+        descricao:
+          type: string
+          example: "Ação Civil Pública"
+
+    AssuntoItem:
+      type: object
+      properties:
+        codigo:
+          type: integer
+        descricao:
+          type: string
+        hierarquia:
+          type: string
+
+    UltimoMovimento:
+      type: object
+      properties:
+        dataHora:
+          type: string
+          format: date-time
+          example: "2025-09-18T00:00:00"
+        codigo:
+          type: integer
+          example: 92
+
+    Parte:
+      type: object
+      properties:
+        polo:
+          type: string
+          example: "PASSIVO"
+        tipoParte:
+          type: string
+          example: "RÉU"
+        nome:
+          type: string
+          example: "ESTADO DO CEARA"
+        outrosNomes:
+          type: array
+          items:
+            $ref: '#/components/schemas/NomeTipo'
+        tipoPessoa:
+          type: string
+          example: "JURIDICA"
+        documentosPrincipais:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentoPrincipal'
+        sigilosa:
+          type: boolean
+        representantes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Representante'
+
+    NomeTipo:
+      type: object
+      properties:
+        nome:
+          type: string
+        tipo:
+          type: string
+
+    DocumentoPrincipal:
+      type: object
+      properties:
+        numero:
+          type: string
+          example: "07273592000164"
+        tipo:
+          type: string
+          example: "CNPJ"
+
+    Representante:
+      type: object
+      properties:
+        tipoRepresentacao:
+          type: string
+          example: "ADVOGADO"
+        nome:
+          type: string
+        cadastroReceitaFederal:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentoPrincipal'
+        situacao:
+          type: string
+          example: "ATIVO"
+        oab:
+          type: array
+          items:
+            $ref: '#/components/schemas/OABRegistro'
+
+    OABRegistro:
+      type: object
+      properties:
+        numero:
+          type: integer
+        uf:
+          type: string
+          example: "10 5 03 003880-14"
+        numeroProcesso:
+          type: string
+          example: "10166 677771/2014-12"
+        situacaoInscricao:
+          type: string
+          example: "121105"
+        situacaoDescricao:
+          type: string
+          example: "ATIVA NAO PRIORIZADA PARA AJUIZAMENTO"
+        nomeDevedor:
+          type: string
+          example: "DEVEDOR DA SILVA"
+        tipoDevedor:
+          type: string
+          example: "PRINCIPAL"
+        valorTotalConsolidadoMoeda:
+          type: string
+          example: "4.457,56"
+        cpfCnpj:
+          type: string
+          example: "097.819.117-68"
+        codigoSida:
+          type: string
+          example: "1000"
+        nomeUnidade:
+          type: string
+          example: "PROCURADORIA REGIONAL DA FAZENDA NACIONAL DA 1A REGIAO"
+        codigoComprot:
+          type: string
+          example: "1101951"
+        codigoUorg:
+          type: string
+          example: "0005786"
+          description: "Código da Unidade Organizacional (UORG)"
+        details:
+          type: string
+          example: "O usuário com ID especificado não existe"
+          nullable: true
+
+security:
+  - bearerAuth: []

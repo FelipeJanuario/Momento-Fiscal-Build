@@ -1,0 +1,9 @@
+
+include:
+  - /infrastructure/ci_cd/gitlab/api.yml
+  - /infrastructure/ci_cd/gitlab/mobile.yml
+
+stages:
+  - test
+  - build
+  - deploy

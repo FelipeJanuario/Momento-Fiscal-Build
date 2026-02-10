@@ -1,0 +1,101 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+ruby "3.3.6"
+
+# Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
+gem "rails", "~> 7.2.2", ">= 7.2.2.2"
+
+# Use postgresql as the database for Active Record
+gem "pg", "~> 1.1"
+
+# Use the Puma web server [https://github.com/puma/puma]
+gem "puma", ">= 6.4.3"
+
+# Build JSON APIs with ease [https://github.com/rails/jbuilder]
+gem "jbuilder"
+
+# Use Redis adapter to run Action Cable in production
+gem "redis", ">= 4.0.1"
+
+# Use Kredis to get higher-level data types in Redis [https://github.com/rails/kredis]
+# gem "kredis"
+
+# Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
+# gem "bcrypt", "~> 3.1.7"
+
+# Windows does not include zoneinfo files, so bundle the tzinfo-data gem
+gem "tzinfo-data", platforms: %i[windows jruby]
+# Reduces boot times through caching; required in config/boot.rb
+gem "bootsnap", require: false
+
+# Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
+# gem "image_processing", "~> 1.2"
+
+# Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
+gem "rack-cors"
+
+# HTTP Client
+gem "faraday"
+
+# Authentication gem
+gem "devise", "~> 4.9.2"
+gem "devise-i18n", "~> 1.12"
+gem "devise-jwt", "~>0.11.0"
+
+# Audition
+gem "paper_trail", "~> 15.0"
+
+# Background jobs processing
+gem "sidekiq", "~> 7.2"
+
+# Postgres full text search
+gem "pg_search"
+
+# Payment gateway
+gem "google-apis-androidpublisher_v3", "~> 0.87.0"
+gem "stripe", "~> 12.5.0"
+
+# Monitoring gem
+gem "opentelemetry-exporter-otlp"
+gem "opentelemetry-instrumentation-all"
+gem "opentelemetry-sdk"
+
+# PDF generation
+gem "pdfkit", "~> 0.8.7.3 "
+
+# Quil delta converter
+gem "rich-text", github: "voxmedia/rich-text-ruby", tag: "v0.4.0"
+
+# wkhtmltopdf binary
+gem "wkhtmltopdf-binary", "~> 0.12.6.8"
+
+group :development, :test do
+  # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
+  gem "debug", platforms: %i[mri mingw x64_mingw]
+
+  # Report Generators
+  gem "brakeman", require: false
+  gem "bullet", require: false
+  gem "simplecov", require: false
+
+  # Test gems
+  gem "factory_bot_rails", "~> 6.2.0"
+  gem "faker", "~> 3.2.0"
+  gem "rails-controller-testing"
+  gem "rspec-rails", "~> 6.0.3"
+  gem "rubocop", "~> 1.64"
+  gem "rubocop-factory_bot", "~> 2.26"
+  gem "rubocop-performance", "~> 1.18"
+  gem "rubocop-rails", "~> 2.20", ">= 2.20.2"
+  gem "rubocop-rspec", require: false
+  gem "rubocop-rspec_rails", "~> 2.30"
+  gem "shoulda-matchers", "~> 6.0"
+  gem "webmock", "~> 3.26.1"
+end
+
+group :development do
+  # Speed up commands on slow machines / big apps [https://github.com/rails/spring]
+  # gem "spring"
+end

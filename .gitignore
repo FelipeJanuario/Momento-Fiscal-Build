@@ -1,0 +1,22 @@
+# Backups de banco de dados
+backups/database/*.dump
+backups/database/*.backup
+
+# Build outputs
+**/build/
+**/dist/
+**/target/
+
+# Logs
+*.log
+log/
+logs/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Large files
+*.dump
+*.backup
