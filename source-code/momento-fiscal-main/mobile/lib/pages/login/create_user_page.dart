@@ -282,11 +282,6 @@ class _CreateUserPageState extends State<CreateUserPage> {
                           key: const ValueKey('oabSubscription'),
                           controller: _authFormData.oabSubscription,
                           autovalidateMode: AutovalidateMode.onUserInteraction,
-                          onChanged: (value) {
-                            setState(() {
-                              _authFormData.oabSubscription.text = value;
-                            });
-                          },
                           keyboardType: const TextInputType.numberWithOptions(
                               signed: true, decimal: true),
                           inputFormatters: [
