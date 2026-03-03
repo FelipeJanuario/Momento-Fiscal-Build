@@ -85,8 +85,14 @@ jobs:
           PP_PATH=$RUNNER_TEMP/profile.mobileprovision
           echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
 
+          # O Xcode exige que o arquivo esteja nomeado com o UUID do perfil
+          UUID=$(security cms -D -i "$PP_PATH" 2>/dev/null \
+            | plutil -extract UUID xml1 - -o - \
+            | sed -n 's/.*<string>\(.*\)<\/string>.*/\1/p')
+
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"${UUID}.mobileprovision"
+          echo "Provisioning Profile instalado: ${UUID}.mobileprovision"
 
       # ── 9. Definir URL da API conforme ambiente ──────────────────────────────
       - name: Definir variáveis de ambiente
