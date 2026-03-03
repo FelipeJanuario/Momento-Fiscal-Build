@@ -31,8 +31,7 @@ jobs:
       - name: Instalar Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.0'
-          channel: 'stable'
+          channel: 'stable'   # usa sempre a última versão stable (Dart 3.8.0+)
           cache: true
 
       # ── 3. Instalar Ruby + Fastlane ──────────────────────────────────────────
