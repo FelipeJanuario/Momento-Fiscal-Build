@@ -1,6 +1,6 @@
 import 'package:intl/intl.dart';
 
-validatorName(value) {
+String? validatorName(value) {
   final name = value ?? '';
   if (name.trim().length < 4) {
     return 'Nome deve ter no mínimo 4 caracteres';
@@ -8,7 +8,7 @@ validatorName(value) {
   return null;
 }
 
-validatorCpf(value) {
+String? validatorCpf(value) {
   if (value!.isEmpty) {
     return 'Por favor, digite seu CPF';
   }
@@ -22,7 +22,7 @@ validatorCpf(value) {
   return null;
 }
 
-validatorEmail(value, {bool? foundEmail}) {
+String? validatorEmail(value, {bool? foundEmail}) {
   if (value!.isEmpty) {
     return 'Por favor, digite um e-mail.';
   }
@@ -40,7 +40,7 @@ validatorEmail(value, {bool? foundEmail}) {
   return null;
 }
 
-validatorPassword(value, {bool? loginValid}) {
+String? validatorPassword(value, {bool? loginValid}) {
   final password = value ?? '';
 
   if (value!.isEmpty) {
@@ -61,7 +61,7 @@ validatorPassword(value, {bool? loginValid}) {
   return null;
 }
 
-validatorPhone(value) {
+String? validatorPhone(value) {
   if (value!.isEmpty) {
     return 'Por favor, digite seu número';
   }
@@ -72,6 +72,7 @@ validatorPhone(value) {
   if (!regExp.hasMatch(value)) {
     return 'Por favor, digite um número de telefone válido';
   }
+  return null;
 }
 
 String? validatorCellPhone(String? value) {
@@ -90,7 +91,7 @@ String? validatorCellPhone(String? value) {
   return null;
 }
 
-validatorDropdown(value) {
+String? validatorDropdown(value) {
   if (value == null) {
     return 'Selecione uma das opções';
   }
@@ -120,7 +121,7 @@ String? validatorBirthDate(DateTime? value) {
   return null;
 }
 
-validatorLenghtOab(value) {
+String? validatorLenghtOab(value) {
   if (value!.isEmpty) {
     return "Por favor, digite a sequência da sua OAB";
   }
@@ -132,7 +133,7 @@ validatorLenghtOab(value) {
   return null;
 }
 
-validatorConfimedPassword(value, password) {
+String? validatorConfimedPassword(value, password) {
   if (value!.isEmpty) {
     return "Por favor, digite a confirmação de senha";
   }
@@ -143,7 +144,7 @@ validatorConfimedPassword(value, password) {
   return null;
 }
 
-validatorCnpj(value) {
+String? validatorCnpj(value) {
   if (value!.isEmpty) {
     return 'Por favor, digite seu CNPJ';
   }
@@ -158,7 +159,7 @@ validatorCnpj(value) {
   return null;
 }
 
-validatorMoney(value) {
+String? validatorMoney(value) {
   if (value == null || value.isEmpty) {
     return 'Por favor, digite um valor.';
   }

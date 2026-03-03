@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:momentofiscal/components/simple_plan_card.dart';
@@ -9,7 +8,6 @@ import 'package:momentofiscal/core/services/billing/in_app_purchase_service.dart
 import 'package:momentofiscal/core/services/billing/stripe_service.dart';
 import 'package:momentofiscal/core/utilities/logger.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
-import 'package:momentofiscal/pages/consulting/management/profile_page.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 /// Page to display and manage subscription plans

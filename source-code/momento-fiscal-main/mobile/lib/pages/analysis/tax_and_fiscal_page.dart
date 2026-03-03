@@ -73,7 +73,7 @@ class _TaxAndFiscalPageState extends State<TaxAndFiscalPage> {
               MaterialPageRoute(
                   builder: (context) => CnpjCpfPage(
                       cnpjCpf: widget.listDebts != null
-                          ? widget.listDebts!.first?.cpfCnpj ?? ""
+                          ? widget.listDebts!.first.cpfCnpj ?? ""
                           : cnpjMask(widget.apiCnpj?.cnpj ?? ""))),
             );
           },
@@ -205,7 +205,7 @@ class _TaxAndFiscalPageState extends State<TaxAndFiscalPage> {
                               style: textTitle,
                             ),
                             Text(
-                              widget.listDebts!.first?.cpfCnpj ?? "",
+                              widget.listDebts!.first.cpfCnpj ?? "",
                               style: const TextStyle(fontSize: 16),
                             )
                           ],
@@ -215,7 +215,7 @@ class _TaxAndFiscalPageState extends State<TaxAndFiscalPage> {
                           'Nome do Devedor: ',
                           style: textTitle,
                         ),
-                        Text(widget.listDebts!.first?.debtedName ?? ""),
+                        Text(widget.listDebts!.first.debtedName ?? ""),
                         const SizedBox(height: 8),
                       ] else ...[
                         Container()

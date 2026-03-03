@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
 import 'package:momentofiscal/pages/plans/verify_plans_page.dart';
 
-cardUpgradePlans({required BuildContext context, required String text}) {
+void cardUpgradePlans({required BuildContext context, required String text}) {
   showDialog(
     // ignore: use_build_context_synchronously
     context: context,

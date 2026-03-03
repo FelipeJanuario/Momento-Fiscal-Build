@@ -8,10 +8,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:momentofiscal/core/models/company.dart';
 import 'package:momentofiscal/core/models/location.dart';
 import 'package:momentofiscal/core/services/biddingAnalyser/location/location_compaines_rails.dart';
-import 'package:momentofiscal/core/utilities/api_constants.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
 import 'package:momentofiscal/pages/dashboard/dashboad_page.dart';
-import 'package:momentofiscal/pages/location/indebted_companies_page.dart';
 
 // Classe simples para agrupar empresas
 class CompanyCluster {

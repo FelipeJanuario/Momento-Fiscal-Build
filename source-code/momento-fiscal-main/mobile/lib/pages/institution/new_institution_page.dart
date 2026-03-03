@@ -61,7 +61,7 @@ class _NewInstitutionPageState extends State<NewInstitutionPage> {
         .format(widget.institution!.limitDebt);
   }
 
-  _clickButton(BuildContext context) async {
+  Future<void> _clickButton(BuildContext context) async {
     bool formValidate = _formKey.currentState!.validate();
     if (!formValidate) return;
 

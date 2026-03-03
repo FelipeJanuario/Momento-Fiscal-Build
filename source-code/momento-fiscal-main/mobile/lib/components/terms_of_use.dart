@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
 
-termsOfUse({
+Future<dynamic> termsOfUse({
   required BuildContext context,
   required void Function()? onPressedIsTerm,
 }) {

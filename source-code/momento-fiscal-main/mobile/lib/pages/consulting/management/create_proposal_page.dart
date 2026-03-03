@@ -59,7 +59,7 @@ class _CreateProposalPageState extends State<CreateProposalPage> {
     }
   }
 
-  getIdUser() async {
+  Future<void> getIdUser() async {
     userId = await storage.read(key: 'id');
   }
 

@@ -64,7 +64,6 @@ class _ResetPasswordCardState extends State<ResetPasswordCard> {
                                     AutovalidateMode.onUserInteraction,
                                 onChanged: (cpfCnpj) {
                                   setState(() {
-                                    textCpf.text = cpfCnpj;
                                     if (cpfCnpj.length > 13) {
                                       _cpfCnpjFormatter = MaskedInputFormatter(
                                         '##.###.###/####-##',

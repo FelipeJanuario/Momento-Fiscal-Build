@@ -66,7 +66,7 @@ class _ProfilePage extends State<ProfilePage> {
     });
   }
 
-  _clickButton(BuildContext context) async {
+  Future<void> _clickButton(BuildContext context) async {
     bool formValidate = _formKey.currentState!.validate();
     if (!formValidate) return;
 
@@ -298,7 +298,7 @@ class _ProfilePage extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 5),
                     DropdownButtonFormField<String>(
-                      value: sex,
+                      initialValue: sex,
                       items: _dropdownItems,
                       onChanged: (value) {
                         setState(() {

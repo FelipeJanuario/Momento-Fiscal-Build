@@ -7,8 +7,8 @@ class ApiConstants {
   // DEV_MODE=false → https://momentofiscal.com.br (produção)
  
   /////////  Alterado para localhost para testes locais  //////////
-  // static String url = devMode ? 'http://localhost:3000' : 'https://momentofiscal.com.br';
-  static String url =  'http://localhost:3000' ;
+  static String url = devMode ? 'http://localhost:3000' : 'https://momentofiscal.com.br';
+  //static String url =  'http://localhost:3000' ;
   static String baseUrl = '$url/api/v1';
   
   // Debug: imprime configuração ao inicializar
