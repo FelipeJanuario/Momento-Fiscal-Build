@@ -3,7 +3,7 @@ name: iOS – Publicar na App Store
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'        # ex: v1.2.3  → produção
+      - 'v[0-9]+.[0-9]+.[0-9]+'          # ex: v1.2.3  → produção
       - 'v[0-9]+.[0-9]+.[0-9]+-rc[0-9]+' # ex: v1.2.3-rc1 → TestFlight
 
   workflow_dispatch:
@@ -40,23 +40,23 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
-          bundler-cache: true   # faz `bundle install` automaticamente se Gemfile existir
-          working-directory: mobile
+          bundler-cache: true
+          working-directory: source-code/momento-fiscal-main/mobile
 
       # ── 4. Instalar dependências Flutter ────────────────────────────────────
       - name: Flutter pub get
         run: flutter pub get
-        working-directory: mobile
+        working-directory: source-code/momento-fiscal-main/mobile
 
       # ── 5. Rodar testes ──────────────────────────────────────────────────────
       - name: Flutter test
         run: flutter test
-        working-directory: mobile
+        working-directory: source-code/momento-fiscal-main/mobile
 
       # ── 6. Instalar pods ────────────────────────────────────────────────────
       - name: Instalar CocoaPods
         run: pod install
-        working-directory: mobile/ios
+        working-directory: source-code/momento-fiscal-main/mobile/ios
 
       # ── 7. Importar Certificado de Distribuição (.p12) ───────────────────────
       - name: Importar certificado Apple no Keychain
@@ -65,20 +65,17 @@ jobs:
           CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          # Criar keychain temporário
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          # Decodificar e importar o certificado .p12
           echo "$CERTIFICATE_BASE64" | base64 --decode -o $RUNNER_TEMP/certificate.p12
           security import $RUNNER_TEMP/certificate.p12 \
             -P "$CERTIFICATE_PASSWORD" \
             -A -t cert -f pkcs12 \
             -k "$KEYCHAIN_PATH"
 
-          # Adicionar keychain temporário à lista de keychains
           security list-keychain -d user -s "$KEYCHAIN_PATH"
 
       # ── 8. Instalar Provisioning Profile ────────────────────────────────────
@@ -94,7 +91,6 @@ jobs:
 
       # ── 9. Definir URL da API conforme ambiente ──────────────────────────────
       - name: Definir variáveis de ambiente
-        id: env_vars
         run: |
           if [[ "${{ github.ref }}" == *"-rc"* ]] || [[ "${{ github.event.inputs.environment }}" == "testflight" ]]; then
             echo "API_BASE_URL=https://momentofiscal.hml.spezi.com.br" >> $GITHUB_ENV
@@ -111,7 +107,7 @@ jobs:
             --release \
             --dart-define API_BASE_URL=$API_BASE_URL \
             --export-options-plist=ios/ExportOptions.plist
-        working-directory: mobile
+        working-directory: source-code/momento-fiscal-main/mobile
 
       # ── 11. Upload via Fastlane ──────────────────────────────────────────────
       - name: Upload para App Store Connect
@@ -119,12 +115,10 @@ jobs:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
-        run: |
-          bundle exec fastlane ${{ env.DEPLOY_TO }}
-        working-directory: mobile
+        run: bundle exec fastlane ${{ env.DEPLOY_TO }}
+        working-directory: source-code/momento-fiscal-main/mobile
 
       # ── 12. Limpar Keychain ──────────────────────────────────────────────────
       - name: Limpar Keychain
         if: always()
-        run: |
-          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
