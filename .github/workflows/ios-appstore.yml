@@ -54,7 +54,7 @@ jobs:
 
       # ── 6. Instalar pods ────────────────────────────────────────────────────
       - name: Instalar CocoaPods
-        run: pod install
+        run: pod install --repo-update
         working-directory: source-code/momento-fiscal-main/mobile/ios
 
       # ── 7. Importar Certificado de Distribuição (.p12) ───────────────────────
