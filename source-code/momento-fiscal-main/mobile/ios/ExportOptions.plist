@@ -7,17 +7,16 @@
     <string>app-store</string>
 
     <key>teamID</key>
-    <string>NPG5D28NH5</string>
+    <string>Q7Y9SSJ75F</string>
 
     <!-- Desativa o gerenciamento automático de assinatura para o CI -->
     <key>signingStyle</key>
     <string>manual</string>
 
     <!-- Nome do Provisioning Profile cadastrado na Apple Developer Portal -->
-    <!-- ALTERE o valor abaixo para o nome exato do seu perfil de distribuição -->
     <key>provisioningProfiles</key>
     <dict>
-        <key>br.com.momentofiscal</key>
+        <key>br.com.momentofiscal1</key>
         <string>Momento Fiscal</string>
     </dict>
 

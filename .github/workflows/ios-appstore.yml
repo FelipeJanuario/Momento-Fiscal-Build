@@ -144,11 +144,14 @@ jobs:
           FLUTTER_XCODE_CODE_SIGN_IDENTITY: "Apple Distribution"
           # UUID é mais confiável que nome para localização do perfil pelo Xcode
           FLUTTER_XCODE_PROVISIONING_PROFILE_SPECIFIER: ${{ env.PROFILE_UUID }}
-          FLUTTER_XCODE_DEVELOPMENT_TEAM: NPG5D28NH5
+          FLUTTER_XCODE_DEVELOPMENT_TEAM: Q7Y9SSJ75F
         run: |
           # Substituir o nome do perfil pelo UUID no ExportOptions.plist
           # O Xcode em modo manual encontra o perfil com muito mais confiabilidade pelo UUID
-          sed -i '' "s|<string>Momento Fiscal</string>|<string>${PROFILE_UUID}</string>|g" \
+          sed -i '' "s|<string>Momento Fiscal</string>|<string>${PROFILE_UUID}</string>|" \
+            ios/ExportOptions.plist
+          # Atualiza o bundle ID no ExportOptions (caso o pbxproj do Flutter regenere)
+          sed -i '' "s|<key>br.com.momentofiscal</key>|<key>br.com.momentofiscal1</key>|" \
             ios/ExportOptions.plist
           echo "📄 ExportOptions.plist atualizado com UUID: ${PROFILE_UUID}"
 

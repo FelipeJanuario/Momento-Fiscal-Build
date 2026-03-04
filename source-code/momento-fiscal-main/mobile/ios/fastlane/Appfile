@@ -1,4 +1,4 @@
-app_identifier "br.com.momentofiscal"
+app_identifier "br.com.momentofiscal1"
 apple_dev_portal_id ENV["APPLE_ID"]     # opcional se usar API Key
-itc_team_id        "NPG5D28NH5"
-team_id            "NPG5D28NH5"
+itc_team_id        "Q7Y9SSJ75F"
+team_id            "Q7Y9SSJ75F"
