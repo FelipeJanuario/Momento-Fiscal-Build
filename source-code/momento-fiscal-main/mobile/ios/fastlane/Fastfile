@@ -19,7 +19,7 @@ end
 #  conforme CFBundleDisplayName / CFBundleName).
 # ──────────────────────────────────────────────────────────────────
 def find_ipa
-  ipa_dir = File.expand_path("../build/ios/ipa", __dir__)
+  ipa_dir = File.expand_path("../../build/ios/ipa", __dir__)
   ipas = Dir.glob("#{ipa_dir}/*.ipa")
   UI.user_error!("Nenhum IPA encontrado em #{ipa_dir}") if ipas.empty?
   UI.message("📦 IPA encontrado: #{ipas.first}")
