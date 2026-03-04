@@ -108,11 +108,12 @@ jobs:
       # ── 10. Build IPA ────────────────────────────────────────────────────────
       - name: Build Flutter IPA
         env:
-          # Configura assinatura manual apenas para o target Runner.
-          # PROVISIONING_PROFILE_SPECIFIER é omitido aqui para não afetar os pods —
-          # o perfil é resolvido pelo ExportOptions.plist na fase de export.
+          # Configura assinatura manual para o target Runner.
+          # Os pods têm CODE_SIGNING_ALLOWED=NO via Podfile post_install,
+          # portanto estas vars não causam conflito com eles.
           FLUTTER_XCODE_CODE_SIGN_STYLE: Manual
           FLUTTER_XCODE_CODE_SIGN_IDENTITY: "Apple Distribution"
+          FLUTTER_XCODE_PROVISIONING_PROFILE_SPECIFIER: "Momento Fiscal"
           FLUTTER_XCODE_DEVELOPMENT_TEAM: NPG5D28NH5
         run: |
           flutter build ipa \
