@@ -82,17 +82,43 @@ jobs:
         env:
           PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
         run: |
+          # Valida se o secret foi preenchido
+          if [ -z "$PROVISIONING_PROFILE_BASE64" ]; then
+            echo "❌ ERRO: Secret APPLE_PROVISIONING_PROFILE_BASE64 está vazio ou não definido!"
+            exit 1
+          fi
+          echo "✅ Secret APPLE_PROVISIONING_PROFILE_BASE64 detectado (tamanho: ${#PROVISIONING_PROFILE_BASE64} chars)"
+
           PP_PATH=$RUNNER_TEMP/profile.mobileprovision
           echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
+
+          # Valida se o arquivo decodificado é válido
+          if [ ! -s "$PP_PATH" ]; then
+            echo "❌ ERRO: Arquivo decodificado está vazio. Verifique se o base64 está correto."
+            exit 1
+          fi
+          echo "✅ Arquivo .mobileprovision decodificado com sucesso ($(wc -c < "$PP_PATH") bytes)"
 
           # O Xcode exige que o arquivo esteja nomeado com o UUID do perfil
           UUID=$(security cms -D -i "$PP_PATH" 2>/dev/null \
             | plutil -extract UUID xml1 - -o - \
             | sed -n 's/.*<string>\(.*\)<\/string>.*/\1/p')
 
+          # Exibe o nome real do perfil para diagnóstico (deve ser exatamente "Momento Fiscal")
+          PROFILE_NAME=$(security cms -D -i "$PP_PATH" 2>/dev/null \
+            | plutil -extract Name xml1 - -o - \
+            | sed -n 's/.*<string>\(.*\)<\/string>.*/\1/p')
+          echo "📋 Nome do perfil encontrado: '${PROFILE_NAME}'"
+          echo "🔑 UUID do perfil: ${UUID}"
+
+          if [ -z "$UUID" ]; then
+            echo "❌ ERRO: Não foi possível extrair o UUID do perfil. O arquivo .mobileprovision pode estar corrompido."
+            exit 1
+          fi
+
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"${UUID}.mobileprovision"
-          echo "Provisioning Profile instalado: ${UUID}.mobileprovision"
+          echo "✅ Provisioning Profile instalado: ${UUID}.mobileprovision"
 
       # ── 9. Definir URL da API conforme ambiente ──────────────────────────────
       - name: Definir variáveis de ambiente
