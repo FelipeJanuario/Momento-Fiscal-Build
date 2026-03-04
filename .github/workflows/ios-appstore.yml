@@ -167,8 +167,9 @@ jobs:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          BUNDLE_GEMFILE: ${{ github.workspace }}/source-code/momento-fiscal-main/mobile/Gemfile
         run: bundle exec fastlane ${{ env.DEPLOY_TO }}
-        working-directory: source-code/momento-fiscal-main/mobile
+        working-directory: source-code/momento-fiscal-main/mobile/ios
 
       # ── 12. Limpar Keychain ──────────────────────────────────────────────────
       - name: Limpar Keychain
