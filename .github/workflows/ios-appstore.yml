@@ -19,7 +19,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: macos-latest   # runner macOS necessário para compilar iOS
+    runs-on: self-hosted   # Mac Mini local — sem consumo de minutos GitHub
     timeout-minutes: 60
 
     steps:
