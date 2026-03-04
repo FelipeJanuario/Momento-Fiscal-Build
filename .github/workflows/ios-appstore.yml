@@ -128,10 +128,10 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == *"-rc"* ]] || [[ "${{ github.event.inputs.environment }}" == "testflight" ]]; then
             echo "API_BASE_URL=https://momentofiscal.hml.spezi.com.br" >> $GITHUB_ENV
-            echo "DEPLOY_TO=testflight" >> $GITHUB_ENV
+            echo "DEPLOY_TO=testflight_upload" >> $GITHUB_ENV
           else
             echo "API_BASE_URL=https://momentofiscal.spezi.com.br" >> $GITHUB_ENV
-            echo "DEPLOY_TO=appstore" >> $GITHUB_ENV
+            echo "DEPLOY_TO=appstore_upload" >> $GITHUB_ENV
           fi
 
       # ── 10. Build IPA ────────────────────────────────────────────────────────
