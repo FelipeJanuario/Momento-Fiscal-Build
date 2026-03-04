@@ -120,6 +120,9 @@ jobs:
           cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"${UUID}.mobileprovision"
           echo "✅ Provisioning Profile instalado: ${UUID}.mobileprovision"
 
+          # Exporta UUID para uso nos próximos passos
+          echo "PROFILE_UUID=${UUID}" >> $GITHUB_ENV
+
       # ── 9. Definir URL da API conforme ambiente ──────────────────────────────
       - name: Definir variáveis de ambiente
         run: |
@@ -139,9 +142,16 @@ jobs:
           # portanto estas vars não causam conflito com eles.
           FLUTTER_XCODE_CODE_SIGN_STYLE: Manual
           FLUTTER_XCODE_CODE_SIGN_IDENTITY: "Apple Distribution"
-          FLUTTER_XCODE_PROVISIONING_PROFILE_SPECIFIER: "Momento Fiscal"
+          # UUID é mais confiável que nome para localização do perfil pelo Xcode
+          FLUTTER_XCODE_PROVISIONING_PROFILE_SPECIFIER: ${{ env.PROFILE_UUID }}
           FLUTTER_XCODE_DEVELOPMENT_TEAM: NPG5D28NH5
         run: |
+          # Substituir o nome do perfil pelo UUID no ExportOptions.plist
+          # O Xcode em modo manual encontra o perfil com muito mais confiabilidade pelo UUID
+          sed -i '' "s|<string>Momento Fiscal</string>|<string>${PROFILE_UUID}</string>|g" \
+            ios/ExportOptions.plist
+          echo "📄 ExportOptions.plist atualizado com UUID: ${PROFILE_UUID}"
+
           flutter build ipa \
             --release \
             --dart-define API_BASE_URL=$API_BASE_URL \
