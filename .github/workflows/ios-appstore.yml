@@ -108,11 +108,11 @@ jobs:
       # ── 10. Build IPA ────────────────────────────────────────────────────────
       - name: Build Flutter IPA
         env:
-          # Estas variáveis são repassadas diretamente ao xcodebuild pelo Flutter,
-          # sobrescrevendo qualquer configuração do project.pbxproj
+          # Configura assinatura manual apenas para o target Runner.
+          # PROVISIONING_PROFILE_SPECIFIER é omitido aqui para não afetar os pods —
+          # o perfil é resolvido pelo ExportOptions.plist na fase de export.
           FLUTTER_XCODE_CODE_SIGN_STYLE: Manual
           FLUTTER_XCODE_CODE_SIGN_IDENTITY: "Apple Distribution"
-          FLUTTER_XCODE_PROVISIONING_PROFILE_SPECIFIER: "Momento Fiscal"
           FLUTTER_XCODE_DEVELOPMENT_TEAM: NPG5D28NH5
         run: |
           flutter build ipa \
