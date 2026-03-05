@@ -27,12 +27,13 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      # ── 2. Instalar Flutter ──────────────────────────────────────────────────
-      - name: Instalar Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'   # usa sempre a última versão stable (Dart 3.8.0+)
-          cache: true
+      # ── 2. Configurar PATH para Flutter (já instalado no self-hosted runner) ─
+      # subosito/flutter-action@v2 falha em caminhos com espaços (exit 126).
+      # O Mac Mini já tem Flutter em /usr/local/share/flutter — apenas registra no PATH.
+      - name: Configurar PATH para Flutter
+        run: |
+          echo "/usr/local/share/flutter/bin" >> "$GITHUB_PATH"
+          /usr/local/share/flutter/bin/flutter --version
 
       # ── 3. Instalar Ruby + Fastlane ──────────────────────────────────────────
       - name: Configurar Ruby
@@ -49,7 +50,7 @@ jobs:
 
       # ── 5. Rodar testes ──────────────────────────────────────────────────────
       - name: Flutter test
-        run: flutter test
+        run: flutter test --no-test-assets
         working-directory: source-code/momento-fiscal-main/mobile
 
       # ── 6. Instalar pods ────────────────────────────────────────────────────
@@ -64,13 +65,13 @@ jobs:
           CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          echo "$CERTIFICATE_BASE64" | base64 --decode -o $RUNNER_TEMP/certificate.p12
-          security import $RUNNER_TEMP/certificate.p12 \
+          echo "$CERTIFICATE_BASE64" | base64 --decode -o "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" \
             -P "$CERTIFICATE_PASSWORD" \
             -A -t cert -f pkcs12 \
             -k "$KEYCHAIN_PATH"
@@ -89,7 +90,7 @@ jobs:
           fi
           echo "✅ Secret APPLE_PROVISIONING_PROFILE_BASE64 detectado (tamanho: ${#PROVISIONING_PROFILE_BASE64} chars)"
 
-          PP_PATH=$RUNNER_TEMP/profile.mobileprovision
+          PP_PATH="$RUNNER_TEMP/profile.mobileprovision"
           echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
 
           # Valida se o arquivo decodificado é válido
@@ -121,17 +122,17 @@ jobs:
           echo "✅ Provisioning Profile instalado: ${UUID}.mobileprovision"
 
           # Exporta UUID para uso nos próximos passos
-          echo "PROFILE_UUID=${UUID}" >> $GITHUB_ENV
+          echo "PROFILE_UUID=${UUID}" >> "$GITHUB_ENV"
 
       # ── 9. Definir URL da API conforme ambiente ──────────────────────────────
       - name: Definir variáveis de ambiente
         run: |
           if [[ "${{ github.ref }}" == *"-rc"* ]] || [[ "${{ github.event.inputs.environment }}" == "testflight" ]]; then
-            echo "API_BASE_URL=https://momentofiscal.hml.spezi.com.br" >> $GITHUB_ENV
-            echo "DEPLOY_TO=testflight_upload" >> $GITHUB_ENV
+            echo "API_BASE_URL=https://momentofiscal.hml.spezi.com.br" >> "$GITHUB_ENV"
+            echo "DEPLOY_TO=testflight_upload" >> "$GITHUB_ENV"
           else
-            echo "API_BASE_URL=https://momentofiscal.spezi.com.br" >> $GITHUB_ENV
-            echo "DEPLOY_TO=appstore_upload" >> $GITHUB_ENV
+            echo "API_BASE_URL=https://momentofiscal.spezi.com.br" >> "$GITHUB_ENV"
+            echo "DEPLOY_TO=appstore_upload" >> "$GITHUB_ENV"
           fi
 
       # ── 10. Build IPA ────────────────────────────────────────────────────────
@@ -174,4 +175,4 @@ jobs:
       # ── 12. Limpar Keychain ──────────────────────────────────────────────────
       - name: Limpar Keychain
         if: always()
-        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+        run: security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
