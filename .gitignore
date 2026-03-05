@@ -2,6 +2,9 @@
 backups/database/*.dump
 backups/database/*.backup
 
+# Self-hosted GitHub Actions runner (não deve entrar no repositório)
+actions-runner/
+
 # Build outputs
 **/build/
 **/dist/
