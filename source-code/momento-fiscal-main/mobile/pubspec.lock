@@ -958,10 +958,9 @@ packages:
   purchases_flutter:
     dependency: "direct main"
     description:
-      name: purchases_flutter
-      sha256: "5c472741d1e073ac8603b1b7d7e1707870a869c927dc31d6f38a4a8658c8d335"
-      url: "https://pub.dev"
-    source: hosted
+      path: purchases_flutter_patch
+      relative: true
+    source: path
     version: "9.8.0"
   quill_native_bridge:
     dependency: transitive
