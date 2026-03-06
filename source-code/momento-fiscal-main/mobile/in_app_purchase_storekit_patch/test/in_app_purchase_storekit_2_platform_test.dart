@@ -8,13 +8,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:in_app_purchase_platform_interface/in_app_purchase_platform_interface.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
-import 'package:in_app_purchase_storekit/src/in_app_purchase_apis.dart';
 import 'package:in_app_purchase_storekit/store_kit_2_wrappers.dart';
 
 import 'fakes/fake_storekit_platform.dart';
+import 'sk2_test_api.g.dart';
+import 'test_api.g.dart';
 
 void main() {
-  final dummyProductWrapper = SK2Product(
+  final SK2Product dummyProductWrapper = SK2Product(
     id: '2',
     displayName: 'name',
     displayPrice: '0.99',
@@ -26,16 +27,14 @@ void main() {
 
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final fakeStoreKit2Platform = FakeStoreKit2Platform();
-  final fakeStoreKitPlatform = FakeStoreKitPlatform();
+  final FakeStoreKit2Platform fakeStoreKit2Platform = FakeStoreKit2Platform();
+  final FakeStoreKitPlatform fakeStoreKitPlatform = FakeStoreKitPlatform();
 
   late InAppPurchaseStoreKitPlatform iapStoreKitPlatform;
 
   setUpAll(() {
-    setInAppPurchaseHostApis(
-      api: fakeStoreKitPlatform,
-      api2: fakeStoreKit2Platform,
-    );
+    TestInAppPurchase2Api.setUp(fakeStoreKit2Platform);
+    TestInAppPurchaseApi.setUp(fakeStoreKitPlatform);
   });
 
   setUp(() {
@@ -55,7 +54,8 @@ void main() {
 
   group('query product list', () {
     test('should get product list and correct invalid identifiers', () async {
-      final connection = InAppPurchaseStoreKitPlatform();
+      final InAppPurchaseStoreKitPlatform connection =
+          InAppPurchaseStoreKitPlatform();
       final ProductDetailsResponse response = await connection
           .queryProductDetails(<String>{'123', '456', '789'});
       final List<ProductDetails> products = response.productDetails;
@@ -74,7 +74,8 @@ void main() {
           message: 'error_message',
           details: <Object, Object>{'info': 'error_info'},
         );
-        final connection = InAppPurchaseStoreKitPlatform();
+        final InAppPurchaseStoreKitPlatform connection =
+            InAppPurchaseStoreKitPlatform();
         final ProductDetailsResponse response = await connection
             .queryProductDetails(<String>{'123', '456', '789'});
         expect(response.productDetails, <ProductDetails>[]);
@@ -92,8 +93,9 @@ void main() {
     test(
       'buying non consumable, should get purchase objects in the purchase update callback',
       () async {
-        final details = <PurchaseDetails>[];
-        final completer = Completer<List<PurchaseDetails>>();
+        final List<PurchaseDetails> details = <PurchaseDetails>[];
+        final Completer<List<PurchaseDetails>> completer =
+            Completer<List<PurchaseDetails>>();
         final Stream<List<PurchaseDetails>> stream =
             iapStoreKitPlatform.purchaseStream;
 
@@ -107,7 +109,7 @@ void main() {
             subscription.cancel();
           }
         });
-        final purchaseParam = AppStorePurchaseParam(
+        final AppStorePurchaseParam purchaseParam = AppStorePurchaseParam(
           productDetails: AppStoreProduct2Details.fromSK2Product(
             dummyProductWrapper,
           ),
@@ -120,16 +122,15 @@ void main() {
         final List<PurchaseDetails> result = await completer.future;
         expect(result.length, 1);
         expect(result.first.productID, dummyProductWrapper.id);
-        expect(result.first.status, PurchaseStatus.purchased);
-        expect(result.first.pendingCompletePurchase, true);
       },
     );
 
     test(
       'buying consumable, should get purchase objects in the purchase update callback',
       () async {
-        final details = <PurchaseDetails>[];
-        final completer = Completer<List<PurchaseDetails>>();
+        final List<PurchaseDetails> details = <PurchaseDetails>[];
+        final Completer<List<PurchaseDetails>> completer =
+            Completer<List<PurchaseDetails>>();
         final Stream<List<PurchaseDetails>> stream =
             iapStoreKitPlatform.purchaseStream;
 
@@ -143,7 +144,7 @@ void main() {
             subscription.cancel();
           }
         });
-        final purchaseParam = AppStorePurchaseParam(
+        final AppStorePurchaseParam purchaseParam = AppStorePurchaseParam(
           productDetails: AppStoreProduct2Details.fromSK2Product(
             dummyProductWrapper,
           ),
@@ -158,7 +159,7 @@ void main() {
     );
 
     test('buying consumable, should throw when autoConsume is false', () async {
-      final purchaseParam = AppStorePurchaseParam(
+      final AppStorePurchaseParam purchaseParam = AppStorePurchaseParam(
         productDetails: AppStoreProduct2Details.fromSK2Product(
           dummyProductWrapper,
         ),
@@ -174,10 +175,11 @@ void main() {
     });
 
     test(
-      'buying consumable, should get PurchaseVerificationData with serverVerificationData, localVerificationData, and appAccountToken',
+      'buying consumable, should get PurchaseVerificationData with serverVerificationData and localVerificationData',
       () async {
-        final details = <PurchaseDetails>[];
-        final completer = Completer<List<PurchaseDetails>>();
+        final List<PurchaseDetails> details = <PurchaseDetails>[];
+        final Completer<List<PurchaseDetails>> completer =
+            Completer<List<PurchaseDetails>>();
         final Stream<List<PurchaseDetails>> stream =
             iapStoreKitPlatform.purchaseStream;
 
@@ -191,7 +193,7 @@ void main() {
             subscription.cancel();
           }
         });
-        final purchaseParam = AppStorePurchaseParam(
+        final AppStorePurchaseParam purchaseParam = AppStorePurchaseParam(
           productDetails: AppStoreProduct2Details.fromSK2Product(
             dummyProductWrapper,
           ),
@@ -210,15 +212,11 @@ void main() {
           result.first.verificationData.localVerificationData,
           'jsonRepresentation',
         );
-        expect(
-          (result.first as SK2PurchaseDetails).appAccountToken,
-          'appAccountToken',
-        );
       },
     );
 
     test('should process Sk2PurchaseParam with winBackOfferId only', () async {
-      final purchaseParam = Sk2PurchaseParam(
+      final Sk2PurchaseParam purchaseParam = Sk2PurchaseParam(
         productDetails: AppStoreProduct2Details.fromSK2Product(
           dummyProductWrapper,
         ),
@@ -240,14 +238,15 @@ void main() {
     test(
       'should process Sk2PurchaseParam with promotionalOffer only',
       () async {
-        final fakeSignature = SK2SubscriptionOfferSignature(
-          keyID: 'key123',
-          signature: 'signature123',
-          nonce: 'nonce123',
-          timestamp: 1234567890,
-        );
+        final SK2SubscriptionOfferSignature fakeSignature =
+            SK2SubscriptionOfferSignature(
+              keyID: 'key123',
+              signature: 'signature123',
+              nonce: 'nonce123',
+              timestamp: 1234567890,
+            );
 
-        final purchaseParam = Sk2PurchaseParam(
+        final Sk2PurchaseParam purchaseParam = Sk2PurchaseParam(
           productDetails: AppStoreProduct2Details.fromSK2Product(
             dummyProductWrapper,
           ),
@@ -283,7 +282,7 @@ void main() {
     test(
       'should process Sk2PurchaseParam with no winBackOfferId or promotionalOffer',
       () async {
-        final purchaseParam = Sk2PurchaseParam(
+        final Sk2PurchaseParam purchaseParam = Sk2PurchaseParam(
           productDetails: AppStoreProduct2Details.fromSK2Product(
             dummyProductWrapper,
           ),
@@ -307,7 +306,7 @@ void main() {
     test(
       'should pass quantity for consumable product with Sk2PurchaseParam',
       () async {
-        final purchaseParam = Sk2PurchaseParam(
+        final Sk2PurchaseParam purchaseParam = Sk2PurchaseParam(
           productDetails: AppStoreProduct2Details.fromSK2Product(
             dummyProductWrapper,
           ),
@@ -330,7 +329,7 @@ void main() {
     test(
       'should default to quantity = 1 when not provided in Sk2PurchaseParam',
       () async {
-        final purchaseParam = Sk2PurchaseParam(
+        final Sk2PurchaseParam purchaseParam = Sk2PurchaseParam(
           productDetails: AppStoreProduct2Details.fromSK2Product(
             dummyProductWrapper,
           ),
@@ -355,7 +354,8 @@ void main() {
       fakeStoreKit2Platform.transactionList.add(
         fakeStoreKit2Platform.createRestoredTransaction('foo', 'RT2'),
       );
-      final completer = Completer<List<PurchaseDetails>>();
+      final Completer<List<PurchaseDetails>> completer =
+          Completer<List<PurchaseDetails>>();
       final Stream<List<PurchaseDetails>> stream =
           iapStoreKitPlatform.purchaseStream;
 
@@ -371,7 +371,7 @@ void main() {
       final List<PurchaseDetails> details = await completer.future;
 
       expect(details.length, 2);
-      for (var i = 0; i < fakeStoreKit2Platform.transactionList.length; i++) {
+      for (int i = 0; i < fakeStoreKit2Platform.transactionList.length; i++) {
         final SK2TransactionMessage expected =
             fakeStoreKit2Platform.transactionList[i];
         final PurchaseDetails actual = details[i];
@@ -387,7 +387,7 @@ void main() {
 
   group('billing configuration', () {
     test('country_code', () async {
-      const expectedCountryCode = 'ABC';
+      const String expectedCountryCode = 'ABC';
       final String countryCode = await iapStoreKitPlatform.countryCode();
       expect(countryCode, expectedCountryCode);
     });
@@ -399,7 +399,7 @@ void main() {
     setUp(() async {
       fakeStoreKit2Platform = FakeStoreKit2Platform();
       fakeStoreKit2Platform.reset();
-      setInAppPurchaseHostApis(api2: fakeStoreKit2Platform);
+      TestInAppPurchase2Api.setUp(fakeStoreKit2Platform);
       await InAppPurchaseStoreKitPlatform.enableStoreKit2();
     });
 
@@ -537,7 +537,7 @@ void main() {
     setUp(() async {
       fakeStoreKit2Platform = FakeStoreKit2Platform();
       fakeStoreKit2Platform.reset();
-      setInAppPurchaseHostApis(api2: fakeStoreKit2Platform);
+      TestInAppPurchase2Api.setUp(fakeStoreKit2Platform);
       await InAppPurchaseStoreKitPlatform.enableStoreKit2();
     });
 
@@ -663,37 +663,5 @@ void main() {
         );
       },
     );
-  });
-
-  group('unfinished transactions', () {
-    test('should return unfinished transactions', () async {
-      final List<SK2Transaction> transactions =
-          await SK2Transaction.unfinishedTransactions();
-
-      expect(transactions, isNotEmpty);
-      expect(transactions.first.id, '123');
-      expect(transactions.first.productId, 'product_id');
-    });
-
-    test(
-      'should expose receiptData (JWS) in unfinished transactions',
-      () async {
-        final List<SK2Transaction> transactions =
-            await SK2Transaction.unfinishedTransactions();
-
-        expect(transactions, isNotEmpty);
-        expect(transactions.first.receiptData, isNotNull);
-        expect(transactions.first.receiptData, 'fake_jws_representation');
-      },
-    );
-
-    test('should expose appAccountToken in unfinished transactions', () async {
-      final List<SK2Transaction> transactions =
-          await SK2Transaction.unfinishedTransactions();
-
-      expect(transactions, isNotEmpty);
-      expect(transactions.first.appAccountToken, isNotNull);
-      expect(transactions.first.appAccountToken, 'fake_app_account_token');
-    });
   });
 }

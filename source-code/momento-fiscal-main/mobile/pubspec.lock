@@ -611,7 +611,7 @@ packages:
       path: in_app_purchase_storekit_patch
       relative: true
     source: path
-    version: "0.4.8"
+    version: "0.4.6"
   intl:
     dependency: "direct main"
     description:

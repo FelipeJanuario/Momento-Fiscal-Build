@@ -68,7 +68,7 @@ class InAppPurchaseStoreKitPlatform extends InAppPurchasePlatform {
     _skPaymentQueueWrapper = SKPaymentQueueWrapper();
 
     if (_useStoreKit2) {
-      final updateController2 =
+      final StreamController<List<PurchaseDetails>> updateController2 =
           StreamController<List<PurchaseDetails>>.broadcast(
             onListen: () => SK2Transaction.startListeningToTransactions(),
             onCancel: () => SK2Transaction.stopListeningToTransactions(),
@@ -80,7 +80,7 @@ class InAppPurchaseStoreKitPlatform extends InAppPurchasePlatform {
     } else {
       // Create a purchaseUpdatedController and notify the native side when to
       // start of stop sending updates.
-      final updateController =
+      final StreamController<List<PurchaseDetails>> updateController =
           StreamController<List<PurchaseDetails>>.broadcast(
             onListen: () =>
                 _skPaymentQueueWrapper.startObservingTransactionQueue(),
@@ -272,7 +272,7 @@ class InAppPurchaseStoreKitPlatform extends InAppPurchasePlatform {
     Set<String> identifiers,
   ) async {
     if (_useStoreKit2) {
-      var products = <SK2Product>[];
+      List<SK2Product> products = <SK2Product>[];
       Set<String> invalidProductIdentifiers;
       PlatformException? exception;
       try {
@@ -293,7 +293,7 @@ class InAppPurchaseStoreKitPlatform extends InAppPurchasePlatform {
                 AppStoreProduct2Details.fromSK2Product(productWrapper),
           )
           .toList();
-      final response = ProductDetailsResponse(
+      final ProductDetailsResponse response = ProductDetailsResponse(
         productDetails: productDetails,
         notFoundIDs: invalidProductIdentifiers.toList(),
         error: exception == null
@@ -307,7 +307,7 @@ class InAppPurchaseStoreKitPlatform extends InAppPurchasePlatform {
       );
       return response;
     }
-    final requestMaker = SKRequestMaker();
+    final SKRequestMaker requestMaker = SKRequestMaker();
     SkProductResponseWrapper response;
     PlatformException? exception;
     try {
@@ -319,7 +319,7 @@ class InAppPurchaseStoreKitPlatform extends InAppPurchasePlatform {
         invalidProductIdentifiers: identifiers.toList(),
       );
     }
-    var productDetails = <AppStoreProductDetails>[];
+    List<AppStoreProductDetails> productDetails = <AppStoreProductDetails>[];
     productDetails = response.products
         .map(
           (SKProductWrapper productWrapper) =>
@@ -330,18 +330,19 @@ class InAppPurchaseStoreKitPlatform extends InAppPurchasePlatform {
     if (productDetails.isEmpty) {
       invalidIdentifiers = identifiers.toList();
     }
-    final productDetailsResponse = ProductDetailsResponse(
-      productDetails: productDetails,
-      notFoundIDs: invalidIdentifiers,
-      error: exception == null
-          ? null
-          : IAPError(
-              source: kIAPSource,
-              code: exception.code,
-              message: exception.message ?? '',
-              details: exception.details,
-            ),
-    );
+    final ProductDetailsResponse productDetailsResponse =
+        ProductDetailsResponse(
+          productDetails: productDetails,
+          notFoundIDs: invalidIdentifiers,
+          error: exception == null
+              ? null
+              : IAPError(
+                  source: kIAPSource,
+                  code: exception.code,
+                  message: exception.message ?? '',
+                  details: exception.details,
+                ),
+        );
     return productDetailsResponse;
   }
 

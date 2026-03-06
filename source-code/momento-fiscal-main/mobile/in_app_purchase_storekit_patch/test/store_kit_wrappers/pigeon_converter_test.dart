@@ -8,18 +8,19 @@ import 'package:in_app_purchase_storekit/src/store_kit_2_wrappers/sk2_product_wr
 import 'package:in_app_purchase_storekit/store_kit_wrappers.dart';
 
 void main() {
-  final locale = SKPriceLocaleWrapper(
+  final SKPriceLocaleWrapper locale = SKPriceLocaleWrapper(
     currencySymbol: r'$',
     currencyCode: 'USD',
     countryCode: 'USA',
   );
 
-  final subPeriod = SKProductSubscriptionPeriodWrapper(
-    numberOfUnits: 1,
-    unit: SKSubscriptionPeriodUnit.month,
-  );
+  final SKProductSubscriptionPeriodWrapper subPeriod =
+      SKProductSubscriptionPeriodWrapper(
+        numberOfUnits: 1,
+        unit: SKSubscriptionPeriodUnit.month,
+      );
 
-  final discount = SKProductDiscountWrapper(
+  final SKProductDiscountWrapper discount = SKProductDiscountWrapper(
     price: '0.99',
     priceLocale: locale,
     numberOfPeriods: 1,
@@ -29,7 +30,7 @@ void main() {
     type: SKProductDiscountType.subscription,
   );
 
-  final product = SKProductWrapper(
+  final SKProductWrapper product = SKProductWrapper(
     productIdentifier: 'fake_product',
     localizedTitle: 'title',
     localizedDescription: 'description',
@@ -39,7 +40,7 @@ void main() {
     discounts: <SKProductDiscountWrapper>[discount],
   );
 
-  final productResponse = SkProductResponseWrapper(
+  final SkProductResponseWrapper productResponse = SkProductResponseWrapper(
     products: <SKProductWrapper>[product],
     invalidProductIdentifiers: const <String>['invalid_identifier'],
   );
@@ -106,7 +107,7 @@ void main() {
   });
 
   test('test SKerror pigeon converter', () {
-    final msg = SKErrorMessage(code: 99, domain: 'domain');
+    final SKErrorMessage msg = SKErrorMessage(code: 99, domain: 'domain');
     final SKError wrapper = SKError.convertFromPigeon(msg);
 
     expect(wrapper.code, 99);
@@ -115,7 +116,7 @@ void main() {
   });
 
   test('test AppStoreProduct2Details conversion', () {
-    final product = SK2Product(
+    final SK2Product product = SK2Product(
       id: '123',
       displayName: 'name',
       displayPrice: '0.99',
@@ -125,7 +126,8 @@ void main() {
       priceLocale: SK2PriceLocale(currencyCode: 'USD', currencySymbol: r'$'),
     );
 
-    final details = AppStoreProduct2Details.fromSK2Product(product);
+    final AppStoreProduct2Details details =
+        AppStoreProduct2Details.fromSK2Product(product);
 
     expect(details.sk2Product, product);
     expect(details.price, product.displayPrice);

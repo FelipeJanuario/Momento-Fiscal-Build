@@ -5,7 +5,8 @@
 import 'package:flutter/services.dart';
 
 import '../../store_kit_2_wrappers.dart';
-import '../in_app_purchase_apis.dart';
+
+InAppPurchase2API _hostApi = InAppPurchase2API();
 
 /// A wrapper around StoreKit2's ProductType
 /// https://developer.apple.com/documentation/storekit/product/producttype
@@ -380,7 +381,7 @@ class SK2Product {
   /// If any of the identifiers are invalid or can't be found, they are excluded
   /// from the returned list.
   static Future<List<SK2Product>> products(List<String> identifiers) async {
-    final List<SK2ProductMessage?> productsMsg = await hostApi2.products(
+    final List<SK2ProductMessage?> productsMsg = await _hostApi.products(
       identifiers,
     );
     if (productsMsg.isEmpty && identifiers.isNotEmpty) {
@@ -405,9 +406,9 @@ class SK2Product {
   }) async {
     SK2ProductPurchaseResultMessage result;
     if (options != null) {
-      result = await hostApi2.purchase(id, options: options.convertToPigeon());
+      result = await _hostApi.purchase(id, options: options.convertToPigeon());
     } else {
-      result = await hostApi2.purchase(id);
+      result = await _hostApi.purchase(id);
     }
     return result.convertFromPigeon();
   }
@@ -415,7 +416,7 @@ class SK2Product {
   /// Checks if the user is eligible for an introductory offer.
   /// The product must be an auto-renewable subscription.
   static Future<bool> isIntroductoryOfferEligible(String productId) async {
-    final bool result = await hostApi2.isIntroductoryOfferEligible(productId);
+    final bool result = await _hostApi.isIntroductoryOfferEligible(productId);
 
     return result;
   }
@@ -425,7 +426,7 @@ class SK2Product {
     String productId,
     String offerId,
   ) async {
-    final bool result = await hostApi2.isWinBackOfferEligible(
+    final bool result = await _hostApi.isWinBackOfferEligible(
       productId,
       offerId,
     );

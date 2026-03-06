@@ -30,7 +30,7 @@ class AppStorePurchaseDetails extends PurchaseDetails {
     SKPaymentTransactionWrapper transaction,
     String base64EncodedReceipt,
   ) {
-    final purchaseDetails = AppStorePurchaseDetails(
+    final AppStorePurchaseDetails purchaseDetails = AppStorePurchaseDetails(
       productID: transaction.payment.productIdentifier,
       purchaseID: transaction.transactionIdentifier,
       skPaymentTransaction: transaction,
@@ -91,12 +91,7 @@ class SK2PurchaseDetails extends PurchaseDetails {
     required super.verificationData,
     required super.transactionDate,
     required super.status,
-    this.appAccountToken,
   });
-
-  /// A UUID that associates the transaction with a user on your own service.
-  /// This is the value set when making the purchase via appAccountToken option.
-  final String? appAccountToken;
 
   @override
   bool get pendingCompletePurchase => status == PurchaseStatus.purchased;

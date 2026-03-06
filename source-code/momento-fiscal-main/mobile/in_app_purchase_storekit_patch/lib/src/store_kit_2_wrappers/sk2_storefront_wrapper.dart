@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import '../in_app_purchase_apis.dart';
+import '../../store_kit_2_wrappers.dart';
+
+InAppPurchase2API _hostApi = InAppPurchase2API();
 
 /// Wrapper for StoreKit2's Storefront
 /// (https://developer.apple.com/documentation/storekit/storefront)
@@ -11,6 +13,6 @@ final class Storefront {
   /// Returns the 3 letter code for a store's locale
   /// (https://developer.apple.com/documentation/storekit/storefront/countrycode)
   Future<String> countryCode() async {
-    return hostApi2.countryCode();
+    return _hostApi.countryCode();
   }
 }

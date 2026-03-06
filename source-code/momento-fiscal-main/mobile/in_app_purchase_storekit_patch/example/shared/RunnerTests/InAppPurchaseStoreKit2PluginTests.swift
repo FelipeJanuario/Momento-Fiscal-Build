@@ -8,14 +8,10 @@ import XCTest
 @testable import in_app_purchase_storekit
 
 final class FakeIAP2Callback: InAppPurchase2CallbackAPIProtocol {
-
-  public var lastUpdate: [in_app_purchase_storekit.SK2TransactionMessage] = []
-
   func onTransactionsUpdated(
     newTransactions newTransactionsArg: [in_app_purchase_storekit.SK2TransactionMessage],
     completion: @escaping (Result<Void, in_app_purchase_storekit.PigeonError>) -> Void
   ) {
-    lastUpdate = newTransactionsArg
     // We should only write to a flutter channel from the main thread.
     XCTAssertTrue(Thread.isMainThread)
   }
@@ -25,7 +21,6 @@ final class FakeIAP2Callback: InAppPurchase2CallbackAPIProtocol {
 final class InAppPurchase2PluginTests: XCTestCase {
   private var session: SKTestSession!
   private var plugin: InAppPurchasePlugin!
-  private var callback: FakeIAP2Callback = FakeIAP2Callback()
 
   override func setUp() async throws {
     try await super.setUp()
@@ -38,7 +33,7 @@ final class InAppPurchase2PluginTests: XCTestCase {
     plugin = InAppPurchasePluginStub(receiptManager: FIAPReceiptManagerStub()) { request in
       DefaultRequestHandler(requestHandler: FIAPRequestHandler(request: request))
     }
-    plugin.transactionCallbackAPI = callback
+    plugin.transactionCallbackAPI = FakeIAP2Callback()
     try plugin.startListeningToTransactions()
   }
 
@@ -91,17 +86,11 @@ final class InAppPurchase2PluginTests: XCTestCase {
 
     await fulfillment(of: [purchaseExpectation], timeout: 5)
 
-    XCTAssert(callback.lastUpdate.count == 1)
-    XCTAssert(
-      callback.lastUpdate.first?.restoring == false,
-      "Ordinary purchase updates should not be marked as restoring")
-
     plugin.transactions {
       result in
       switch result {
       case .success(let transactions):
         XCTAssert(transactions.count == 1)
-        XCTAssert(transactions.first?.restoring == false)
         transactionExpectation.fulfill()
       case .failure(let error):
         XCTFail("Getting transactions should NOT fail. Failed with \(error)")
@@ -223,7 +212,7 @@ final class InAppPurchase2PluginTests: XCTestCase {
     plugin.purchase(id: "consumable", options: nil) { result in
       switch result {
       case .success:
-        XCTFail("Purchase should NOT succeed.")
+        XCTFail("Purchase should NOT suceed.")
       case .failure(let error):
         XCTAssertEqual(
           error.localizedDescription,
@@ -387,9 +376,6 @@ final class InAppPurchase2PluginTests: XCTestCase {
     }
     await fulfillment(of: [purchaseExpectation], timeout: 5)
 
-    XCTAssert(callback.lastUpdate.count == 1)
-    XCTAssert(callback.lastUpdate.first?.restoring == false)
-
     plugin.restorePurchases { result in
       switch result {
       case .success():
@@ -399,9 +385,6 @@ final class InAppPurchase2PluginTests: XCTestCase {
       }
     }
     await fulfillment(of: [restoreExpectation], timeout: 5)
-
-    XCTAssert(callback.lastUpdate.count == 1)
-    XCTAssert(callback.lastUpdate.first?.restoring == true)
   }
 
   func testFinishTransaction() async throws {
@@ -410,7 +393,7 @@ final class InAppPurchase2PluginTests: XCTestCase {
 
     plugin.purchase(id: "consumable", options: nil) { result in
       switch result {
-      case .success(_):
+      case .success(let purchase):
         purchaseExpectation.fulfill()
       case .failure(let error):
         XCTFail("Purchase should NOT fail. Failed with \(error)")

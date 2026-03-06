@@ -4,28 +4,28 @@
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:in_app_purchase_storekit/src/in_app_purchase_apis.dart';
 import 'package:in_app_purchase_storekit/store_kit_wrappers.dart';
 
 import '../fakes/fake_storekit_platform.dart';
+import '../test_api.g.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final fakeStoreKitPlatform = FakeStoreKitPlatform();
+  final FakeStoreKitPlatform fakeStoreKitPlatform = FakeStoreKitPlatform();
 
   setUpAll(() {
-    setInAppPurchaseHostApis(api: fakeStoreKitPlatform);
+    TestInAppPurchaseApi.setUp(fakeStoreKitPlatform);
   });
 
   test(
     'handlePaymentQueueDelegateCallbacks should call SKPaymentQueueDelegateWrapper.shouldContinueTransaction',
     () async {
-      final queue = SKPaymentQueueWrapper();
-      final testDelegate = TestPaymentQueueDelegate();
+      final SKPaymentQueueWrapper queue = SKPaymentQueueWrapper();
+      final TestPaymentQueueDelegate testDelegate = TestPaymentQueueDelegate();
       await queue.setDelegate(testDelegate);
 
-      final arguments = <String, dynamic>{
+      final Map<String, dynamic> arguments = <String, dynamic>{
         'storefront': <String, String>{
           'countryCode': 'USA',
           'identifier': 'unique_identifier',
@@ -49,11 +49,11 @@ void main() {
   test(
     'handlePaymentQueueDelegateCallbacks should call SKPaymentQueueDelegateWrapper.shouldShowPriceConsent',
     () async {
-      final queue = SKPaymentQueueWrapper();
-      final testDelegate = TestPaymentQueueDelegate();
+      final SKPaymentQueueWrapper queue = SKPaymentQueueWrapper();
+      final TestPaymentQueueDelegate testDelegate = TestPaymentQueueDelegate();
       await queue.setDelegate(testDelegate);
 
-      final result =
+      final bool result =
           (await queue.handlePaymentQueueDelegateCallbacks(
                 const MethodCall('shouldShowPriceConsent'),
               ))!
@@ -67,11 +67,12 @@ void main() {
   test(
     'handleObserverCallbacks should call SKTransactionObserverWrapper.restoreCompletedTransactionsFailed',
     () async {
-      final queue = SKPaymentQueueWrapper();
-      final testObserver = TestTransactionObserverWrapper();
+      final SKPaymentQueueWrapper queue = SKPaymentQueueWrapper();
+      final TestTransactionObserverWrapper testObserver =
+          TestTransactionObserverWrapper();
       queue.setTransactionObserver(testObserver);
 
-      final arguments = <dynamic, dynamic>{
+      final Map<dynamic, dynamic> arguments = <dynamic, dynamic>{
         'code': 100,
         'domain': 'domain',
         'userInfo': <String, dynamic>{'error': 'underlying_error'},

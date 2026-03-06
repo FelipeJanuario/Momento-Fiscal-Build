@@ -230,28 +230,6 @@ extension InAppPurchasePlugin: InAppPurchase2API {
     }
   }
 
-  /// Wrapper method around StoreKit2's Transaction.unfinished
-  /// https://developer.apple.com/documentation/storekit/transaction/unfinished
-  func unfinishedTransactions(
-    completion: @escaping (Result<[SK2TransactionMessage], Error>) -> Void
-  ) {
-    Task {
-      @MainActor in
-      var transactionsMsgs: [SK2TransactionMessage] = []
-      for await verificationResult in Transaction.unfinished {
-        switch verificationResult {
-        case .verified(let transaction):
-          transactionsMsgs.append(
-            transaction.convertToPigeon(receipt: verificationResult.jwsRepresentation)
-          )
-        case .unverified:
-          break
-        }
-      }
-      completion(.success(transactionsMsgs))
-    }
-  }
-
   func restorePurchases(completion: @escaping (Result<Void, Error>) -> Void) {
     Task { [weak self] in
       guard let self = self else { return }
@@ -261,8 +239,7 @@ extension InAppPurchasePlugin: InAppPurchase2API {
           switch completedPurchase {
           case .verified(let purchase):
             self.sendTransactionUpdate(
-              transaction: purchase, receipt: "\(completedPurchase.jwsRepresentation)",
-              restoring: true)
+              transaction: purchase, receipt: "\(completedPurchase.jwsRepresentation)")
           case .unverified(let failedPurchase, let error):
             unverifiedPurchases[failedPurchase.id] = (
               receipt: completedPurchase.jwsRepresentation, error: error
@@ -355,10 +332,8 @@ extension InAppPurchasePlugin: InAppPurchase2API {
   }
 
   /// Sends an transaction back to Dart. Access these transactions with `purchaseStream`
-  private func sendTransactionUpdate(
-    transaction: Transaction, receipt: String? = nil, restoring: Bool = false
-  ) {
-    let transactionMessage = transaction.convertToPigeon(receipt: receipt, restoring: restoring)
+  private func sendTransactionUpdate(transaction: Transaction, receipt: String? = nil) {
+    let transactionMessage = transaction.convertToPigeon(receipt: receipt)
     Task { @MainActor in
       self.transactionCallbackAPI?.onTransactionsUpdated(newTransactions: [transactionMessage]) {
         result in

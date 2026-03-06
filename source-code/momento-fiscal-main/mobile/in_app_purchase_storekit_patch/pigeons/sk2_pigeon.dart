@@ -7,8 +7,9 @@ import 'package:pigeon/pigeon.dart';
 @ConfigurePigeon(
   PigeonOptions(
     dartOut: 'lib/src/sk2_pigeon.g.dart',
+    dartTestOut: 'test/sk2_test_api.g.dart',
     swiftOut:
-        'darwin/in_app_purchase_storekit/Sources/in_app_purchase_storekit/StoreKit2/StoreKit2Messages.g.swift',
+        'darwin/in_app_purchase_storekit/Sources/in_app_purchase_storekit/StoreKit2/sk2_pigeon.g.swift',
     copyrightHeader: 'pigeons/copyright.txt',
   ),
 )
@@ -215,7 +216,7 @@ enum SK2ProductPurchaseResultMessage {
   pending,
 }
 
-@HostApi()
+@HostApi(dartHostTestHandler: 'TestInAppPurchase2Api')
 abstract class InAppPurchase2API {
   // https://developer.apple.com/documentation/storekit/appstore/3822277-canmakepayments
   bool canMakePayments();
@@ -239,9 +240,6 @@ abstract class InAppPurchase2API {
 
   @async
   List<SK2TransactionMessage> transactions();
-
-  @async
-  List<SK2TransactionMessage> unfinishedTransactions();
 
   @async
   void finish(int id);

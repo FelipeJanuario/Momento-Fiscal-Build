@@ -76,8 +76,9 @@ dependency_overrides:
     path: ./pay_ios_patch
   share_plus:
     path: ./share_plus_patch
-  # in_app_purchase_storekit 0.4.8 usa visionos(1.0) em FLTPaymentQueueProtocol.h
+  # in_app_purchase_storekit 0.4.6 usa visionos(1.0) em FLTPaymentQueueProtocol.h
   # que é incompatível com Xcode 14.2 (SDK 16.2). Patch local remove a macro visionos.
+  # NÃO usar 0.4.8: introduz APIs StoreKit2 (winBackOffers, Signature) que requerem Xcode 16+.
   in_app_purchase_storekit:
     path: ./in_app_purchase_storekit_patch
 
