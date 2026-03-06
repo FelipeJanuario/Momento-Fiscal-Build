@@ -70,9 +70,12 @@ dependencies:
 
 # Patch local: remove membros de PKPaymentNetwork inexistentes no iOS 16.2 SDK (Xcode 14.2)
 # bankAxept/meeza/NAPAS/pagoBancomat/postFinance/tmoney requerem iOS 17+
+# Patch local: UIActivityTypeAddToHomeScreen requer iOS 16.4 SDK (indisponível no Xcode 14.2)
 dependency_overrides:
   pay_ios:
     path: ./pay_ios_patch
+  share_plus:
+    path: ./share_plus_patch
 
 dev_dependencies:
   flutter_test:
