@@ -173,8 +173,16 @@ jobs:
             ios/ExportOptions.plist
           echo "📄 ExportOptions.plist atualizado com UUID: ${PROFILE_UUID}"
 
+          # GITHUB_RUN_NUMBER é sempre crescente — garante build number único na Apple
+          BUILD_NUMBER=${{ github.run_number }}
+          # Extrai versão de marketing do pubspec.yaml (parte antes do '+')
+          VERSION_NAME=$(grep '^version:' pubspec.yaml | sed 's/version: //;s/+.*//')
+          echo "🔢 Build: ${VERSION_NAME}+${BUILD_NUMBER}"
+
           flutter build ipa \
             --release \
+            --build-number=$BUILD_NUMBER \
+            --build-name=$VERSION_NAME \
             --dart-define API_BASE_URL=$API_BASE_URL \
             --export-options-plist=ios/ExportOptions.plist
         working-directory: source-code/momento-fiscal-main/mobile
