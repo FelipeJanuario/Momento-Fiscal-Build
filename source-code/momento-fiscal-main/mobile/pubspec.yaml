@@ -68,6 +68,12 @@ dependencies:
   logger: ^2.6.2
   flutter_map_marker_cluster: ^1.3.6
 
+# Patch local: remove membros de PKPaymentNetwork inexistentes no iOS 16.2 SDK (Xcode 14.2)
+# bankAxept/meeza/NAPAS/pagoBancomat/postFinance/tmoney requerem iOS 17+
+dependency_overrides:
+  pay_ios:
+    path: ./pay_ios_patch
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
