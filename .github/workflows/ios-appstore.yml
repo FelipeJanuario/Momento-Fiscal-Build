@@ -19,7 +19,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: macos-15      # GitHub-hosted: Xcode 16+ / iOS 18 SDK (exigido pela Apple)
+    runs-on: self-hosted   # Mac Mini local — sem consumo de minutos GitHub
     timeout-minutes: 60
 
     steps:
@@ -27,19 +27,25 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      # ── 2. Instalar Flutter via action ───────────────────────────────────────
-      - name: Instalar Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
+      # ── 2. Configurar PATH para Flutter (já instalado no self-hosted runner) ─
+      # subosito/flutter-action@v2 falha em caminhos com espaços (exit 126).
+      # O Mac Mini já tem Flutter em /usr/local/share/flutter — apenas registra no PATH.
+      - name: Configurar PATH para Flutter
+        run: |
+          echo "/usr/local/share/flutter/bin" >> "$GITHUB_PATH"
+          /usr/local/share/flutter/bin/flutter --version
 
-      # ── 3. Configurar Ruby + Fastlane ────────────────────────────────────────
-      - name: Instalar Ruby e dependências Fastlane
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.3'
-          bundler-cache: true
-          working-directory: source-code/momento-fiscal-main/mobile
+      # ── 3. Configurar Ruby + Fastlane (já instalados via rbenv no self-hosted) ─
+      # ruby/setup-ruby@v1 não suporta self-hosted runners (falha em non-GitHub images).
+      # O Mac Mini já tem Ruby 3.3.6 + Bundler via rbenv em ~/.rbenv/shims.
+      - name: Configurar Ruby e instalar dependências Fastlane
+        run: |
+          echo "/Users/luizfelipe/.rbenv/shims" >> "$GITHUB_PATH"
+          echo "/Users/luizfelipe/.rbenv/bin" >> "$GITHUB_PATH"
+          ruby --version
+          bundle --version
+          bundle install --jobs 4 --retry 3
+        working-directory: source-code/momento-fiscal-main/mobile
 
       # ── 4. Instalar dependências Flutter ────────────────────────────────────
       - name: Flutter pub get
