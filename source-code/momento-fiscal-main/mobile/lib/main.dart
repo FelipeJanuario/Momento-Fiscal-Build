@@ -77,44 +77,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// import 'package:flutter/material.dart';
-// import 'package:flutter_localizations/flutter_localizations.dart';
-// import 'package:flutter_stripe/flutter_stripe.dart';
-// import 'package:momentofiscal/core/utilities/api_constants.dart';
-// import 'package:momentofiscal/core/utilities/styles_constants.dart';
-// import 'package:momentofiscal/pages/login/auth_page.dart';
-
-// void main() async {
-//   await _setup();
-//   runApp(const MyApp());
-// }
-
-// Future<void> _setup() async {
-//   WidgetsFlutterBinding.ensureInitialized();
-//   Stripe.publishableKey = ApiConstants.stripePublishableKey;
-// }
-
-// class MyApp extends StatelessWidget {
-//   const MyApp({super.key});
-
-//   // This widget is the root of your application.
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       title: 'Momento Fiscal',
-//       theme: ThemeData(
-//         colorScheme: ColorScheme.fromSeed(seedColor: colorPrimaty),
-//         useMaterial3: true,
-//       ),
-//       localizationsDelegates: const [
-//         GlobalMaterialLocalizations.delegate,
-//         GlobalWidgetsLocalizations.delegate,
-//         GlobalCupertinoLocalizations.delegate,
-//       ],
-//       supportedLocales: const [
-//         Locale('pt', 'BR'),
-//       ],
-//       home: const AuthPage(),
-//     );
-//   }
-// }
+// [REMOVIDO] Bloco legado que usava flutter_stripe SDK nativo.
+// Pagamentos iOS via Apple Pay (pay + in_app_purchase).
+// Pagamentos web/Android via Stripe HTTP API (StripeService → backend Rails).
