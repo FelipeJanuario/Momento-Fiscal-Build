@@ -5,7 +5,6 @@ import 'package:momentofiscal/core/models/plan_stripe.dart';
 import 'package:momentofiscal/core/models/purchasable_product.dart';
 import 'package:momentofiscal/core/models/subscription.dart';
 import 'package:momentofiscal/core/services/billing/in_app_purchase_service.dart';
-import 'package:momentofiscal/core/services/billing/stripe_service.dart';
 import 'package:momentofiscal/core/utilities/logger.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
@@ -142,14 +141,6 @@ class _VerifyPlansPageState extends State<VerifyPlansPage> {
         },
       );
 
-      // Fetch active subscriptions from Stripe
-      final activeSubscriptions = await StripeService().getActiveSubscriptions();
-      
-      // Store active product IDs for plan checking
-      final activeProductIds = activeSubscriptions
-          .map((sub) => sub['items']['data'][0]['price']['product'] as String)
-          .toSet();
-
       if (mounted) {
         setState(() {
           products = newProducts;
@@ -180,25 +171,6 @@ class _VerifyPlansPageState extends State<VerifyPlansPage> {
   }
 
   Widget getButtonWidget(PurchasableProduct productStripe) {
-    // Check if user already has this plan active
-    // (plans list is not used anymore - checking via Stripe API)
-    if (false) {
-      return const Wrap(
-        children: [
-          Text(
-            'Plano já obtido',
-            style: TextStyle(color: Colors.white),
-          ),
-          SizedBox(width: 5),
-          Icon(
-            Icons.lock_outline_rounded,
-            color: Colors.white,
-            size: 20,
-          )
-        ],
-      );
-    }
-
     return const Text(
       'Assinar Agora',
       style: TextStyle(color: Colors.white),

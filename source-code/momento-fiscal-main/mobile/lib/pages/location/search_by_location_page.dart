@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:momentofiscal/core/models/company.dart';
-import 'package:momentofiscal/core/models/location.dart';
 import 'package:momentofiscal/core/services/biddingAnalyser/location/location_compaines_rails.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
 import 'package:momentofiscal/pages/dashboard/dashboad_page.dart';
@@ -42,11 +41,6 @@ class _SearchByLocationPageState extends State<SearchByLocationPage> {
   bool isLoading = false;
   bool isMoreLoading = false;
   late Future<void> company;
-  double? _longStarting;
-  double? _latStarting;
-  double? _longEnding;
-  double? _latEnding;
-  String? _previousGeohash;
   LatLng? _currentCameraCenter;
   String? _selectedDebtNature;
 
@@ -429,9 +423,8 @@ class _SearchByLocationPageState extends State<SearchByLocationPage> {
         // Atualiza marcadores com clustering
         await _updateMarkersFromCompanies(companiesInRegion);
       } else {
-        // Modo antigo: usa clusters do biddings analyser
-        final List<Location> locations =
-            await LocationCompaniesRails().getCountInLocation(
+        // Modo antigo: usa clusters do biddings analyser (resultado não utilizado)
+        await LocationCompaniesRails().getCountInLocation(
           longStarting: visibleRegion.southwest.longitude,
           latStarting: visibleRegion.northeast.latitude,
           longEnding: visibleRegion.northeast.longitude,
@@ -1196,6 +1189,7 @@ class _SearchByLocationPageState extends State<SearchByLocationPage> {
 
   Future<Map<String, dynamic>> _consultarDividaSerpro(String cnpj) async {
     // Remove formatação do CNPJ
+    // ignore: unused_local_variable
     final cnpjLimpo = cnpj.replaceAll(RegExp(r'[^\d]'), '');
 
     try {
