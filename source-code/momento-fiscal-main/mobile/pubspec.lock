@@ -590,12 +590,13 @@ packages:
     source: hosted
     version: "1.4.0"
   in_app_purchase_storekit:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: in_app_purchase_storekit_patch
-      relative: true
-    source: path
-    version: "0.4.6"
+      name: in_app_purchase_storekit
+      sha256: "2f1a1db44798158076ced07d401b349880dd24a29c7c50a1b1a0de230b7f2f62"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.8"
   intl:
     dependency: "direct main"
     description:
@@ -837,11 +838,12 @@ packages:
     source: hosted
     version: "3.2.0"
   pay_ios:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: pay_ios_patch
-      relative: true
-    source: path
+      name: pay_ios
+      sha256: ca4a7a12b4396b1205f314bebbc92e5268c627b65e5e6b3ab30efc2326da0a28
+      url: "https://pub.dev"
+    source: hosted
     version: "1.1.0"
   pay_platform_interface:
     dependency: transitive
@@ -958,10 +960,11 @@ packages:
   purchases_flutter:
     dependency: "direct main"
     description:
-      path: purchases_flutter_patch
-      relative: true
-    source: path
-    version: "9.8.0"
+      name: purchases_flutter
+      sha256: "3074eb68e8766bceabfbd7e8f5281304e0bb2e1f70004a5ad97747125117493d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.13.1"
   quill_native_bridge:
     dependency: transitive
     description:
@@ -1037,9 +1040,10 @@ packages:
   share_plus:
     dependency: "direct main"
     description:
-      path: share_plus_patch
-      relative: true
-    source: path
+      name: share_plus
+      sha256: "14c8860d4de93d3a7e53af51bff479598c4e999605290756bbbe45cf65b37840"
+      url: "https://pub.dev"
+    source: hosted
     version: "12.0.1"
   share_plus_platform_interface:
     dependency: transitive
