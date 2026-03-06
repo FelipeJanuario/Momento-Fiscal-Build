@@ -608,10 +608,9 @@ packages:
   in_app_purchase_storekit:
     dependency: "direct overridden"
     description:
-      name: in_app_purchase_storekit
-      sha256: "2f1a1db44798158076ced07d401b349880dd24a29c7c50a1b1a0de230b7f2f62"
-      url: "https://pub.dev"
-    source: hosted
+      path: in_app_purchase_storekit_patch
+      relative: true
+    source: path
     version: "0.4.8"
   intl:
     dependency: "direct main"

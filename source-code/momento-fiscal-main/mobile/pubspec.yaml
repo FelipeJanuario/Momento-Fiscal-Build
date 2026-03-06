@@ -76,9 +76,10 @@ dependency_overrides:
     path: ./pay_ios_patch
   share_plus:
     path: ./share_plus_patch
-  # in_app_purchase_storekit 0.4.6 causa "Swift Compiler Error: Expected ','" no Xcode 14.3+
-  # devido a símbolos novos em FLTPaymentQueueProtocol.h. Versão 0.4.8 corrige o problema.
-  in_app_purchase_storekit: 0.4.8
+  # in_app_purchase_storekit 0.4.8 usa visionos(1.0) em FLTPaymentQueueProtocol.h
+  # que é incompatível com Xcode 14.2 (SDK 16.2). Patch local remove a macro visionos.
+  in_app_purchase_storekit:
+    path: ./in_app_purchase_storekit_patch
 
 dev_dependencies:
   flutter_test:
