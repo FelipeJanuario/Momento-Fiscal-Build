@@ -64,6 +64,7 @@ extension InAppPurchasePlugin: InAppPurchase2API {
           purchaseOptions.insert(.quantity(Int(quantity)))
         }
 
+        #if swift(>=5.9)
         if #available(iOS 17.4, macOS 14.4, *) {
           if let promotionalOffer = options?.promotionalOffer {
             purchaseOptions.insert(
@@ -74,7 +75,9 @@ extension InAppPurchasePlugin: InAppPurchase2API {
             )
           }
         }
+        #endif
 
+        #if swift(>=5.9)
         if #available(iOS 18.0, macOS 15.0, *) {
           if let winBackOfferId = options?.winBackOfferId,
             let winBackOffer = product.subscription?.winBackOffers.first(where: {
@@ -84,6 +87,7 @@ extension InAppPurchasePlugin: InAppPurchase2API {
             purchaseOptions.insert(.winBackOffer(winBackOffer))
           }
         }
+        #endif
 
         let result = try await product.purchase(options: purchaseOptions)
 
@@ -116,6 +120,7 @@ extension InAppPurchasePlugin: InAppPurchase2API {
     offerId: String,
     completion: @escaping (Result<Bool, Error>) -> Void
   ) {
+    #if swift(>=5.9)
     if #available(iOS 18.0, macOS 15.0, *) {
       Task {
         do {
@@ -165,6 +170,14 @@ extension InAppPurchasePlugin: InAppPurchase2API {
             message: "Win back offers require iOS 18+ or macOS 15.0+",
             details: nil)))
     }
+    #else
+    completion(
+      .failure(
+        PigeonError(
+          code: "storekit2_unsupported_platform_version",
+          message: "Win back offers require iOS 18+ or macOS 15.0+",
+          details: nil)))
+    #endif
   }
 
   /// Checks if the user is eligible for an introductory offer.

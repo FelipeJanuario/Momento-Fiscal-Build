@@ -54,9 +54,11 @@ extension Product.SubscriptionInfo {
   var convertToPigeon: SK2SubscriptionInfoMessage {
     var allOffers: [SK2SubscriptionOfferMessage] = []
 
+    #if swift(>=5.9)
     if #available(iOS 18.0, macOS 15.0, *) {
       allOffers.append(contentsOf: winBackOffers.map { $0.convertToPigeon })
     }
+    #endif
 
     allOffers.append(contentsOf: promotionalOffers.map { $0.convertToPigeon })
 
@@ -104,6 +106,7 @@ extension SK2SubscriptionOfferMessage: Equatable {
 }
 
 extension SK2SubscriptionOfferSignatureMessage {
+  #if swift(>=5.9)
   @available(iOS 17.4, macOS 14.4, *)
   var convertToSignature: Product.SubscriptionOffer.Signature {
     return Product.SubscriptionOffer.Signature(
@@ -113,6 +116,7 @@ extension SK2SubscriptionOfferSignatureMessage {
       signature: signatureAsData
     )
   }
+  #endif
 
   var nonceAsUUID: UUID {
     guard let uuid = UUID(uuidString: nonce) else {
@@ -139,11 +143,13 @@ extension Product.SubscriptionOffer.OfferType {
     case .promotional:
       return SK2SubscriptionOfferTypeMessage.promotional
     default:
+      #if swift(>=5.9)
       if #available(iOS 18.0, macOS 15.0, *) {
         if self == .winBack {
           return SK2SubscriptionOfferTypeMessage.winBack
         }
       }
+      #endif
       fatalError("An unknown or unsupported OfferType was passed in")
     }
   }
@@ -216,11 +222,11 @@ extension SK2PriceLocaleMessage: Equatable {
 @available(iOS 15.0, macOS 12.0, *)
 extension Product.PurchaseResult {
   func convertToPigeon() -> SK2ProductPurchaseResultMessage {
-    return switch self {
-    case .success(.verified): .success
-    case .success(.unverified): .unverified
-    case .userCancelled: .userCancelled
-    case .pending: .pending
+    switch self {
+    case .success(.verified): return .success
+    case .success(.unverified): return .unverified
+    case .userCancelled: return .userCancelled
+    case .pending: return .pending
     @unknown default:
       fatalError()
     }
