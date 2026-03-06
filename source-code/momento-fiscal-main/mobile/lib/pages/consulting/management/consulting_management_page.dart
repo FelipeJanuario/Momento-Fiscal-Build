@@ -221,7 +221,7 @@ class _ConsultingManagementPageState extends State<ConsultingManagementPage> {
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: _selectedStatus,
+                  initialValue: _selectedStatus,
                   items: dropdownItemsStatus,
                   decoration: const InputDecoration(
                     label: Text('Status'),

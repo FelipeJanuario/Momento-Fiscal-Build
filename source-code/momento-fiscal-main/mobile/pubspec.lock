@@ -387,14 +387,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.2"
-  flutter_stripe:
-    dependency: "direct main"
-    description:
-      name: flutter_stripe
-      sha256: febc0ad31f26fb4c7710fd907519b1f7a15f02536f03c4879cb0f9c3ae032e6f
-      url: "https://pub.dev"
-    source: hosted
-    version: "12.0.2"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -405,14 +397,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  freezed_annotation:
-    dependency: transitive
-    description:
-      name: freezed_annotation
-      sha256: "7294967ff0a6d98638e7acb774aac3af2550777accd8149c90af5b014e6d44d8"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.1.0"
   geoclue:
     dependency: transitive
     description:
@@ -606,12 +590,11 @@ packages:
     source: hosted
     version: "1.4.0"
   in_app_purchase_storekit:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: in_app_purchase_storekit
-      sha256: dab4feef532af88ddec22200e4b3809c02c9bd0da3d0864f3e8e0f7b02f95867
-      url: "https://pub.dev"
-    source: hosted
+      path: in_app_purchase_storekit_patch
+      relative: true
+    source: path
     version: "0.4.6"
   intl:
     dependency: "direct main"
@@ -841,25 +824,24 @@ packages:
     dependency: "direct main"
     description:
       name: pay
-      sha256: "83b15697797f8013bd7693193b9f657bacfe40c5d0a31d4e084caed5fe22d29c"
+      sha256: e012871f065c188e4c275e30b0000c174f6df99101ef137f9cc52ed13fad80e8
       url: "https://pub.dev"
     source: hosted
-    version: "3.2.1"
+    version: "3.3.0"
   pay_android:
     dependency: transitive
     description:
       name: pay_android
-      sha256: d3e7d72e8be7f65dd8f0d3fd36a7c0357d94b504163b7dd6eed5e99f6f32405d
+      sha256: "27dab62d564290aea584b6b39dbbda390b935d6d7296b54bc28de65579bfb049"
       url: "https://pub.dev"
     source: hosted
-    version: "3.1.1"
+    version: "3.2.0"
   pay_ios:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: pay_ios
-      sha256: ca4a7a12b4396b1205f314bebbc92e5268c627b65e5e6b3ab30efc2326da0a28
-      url: "https://pub.dev"
-    source: hosted
+      path: pay_ios_patch
+      relative: true
+    source: path
     version: "1.1.0"
   pay_platform_interface:
     dependency: transitive
@@ -976,10 +958,9 @@ packages:
   purchases_flutter:
     dependency: "direct main"
     description:
-      name: purchases_flutter
-      sha256: "5c472741d1e073ac8603b1b7d7e1707870a869c927dc31d6f38a4a8658c8d335"
-      url: "https://pub.dev"
-    source: hosted
+      path: purchases_flutter_patch
+      relative: true
+    source: path
     version: "9.8.0"
   quill_native_bridge:
     dependency: transitive
@@ -1056,11 +1037,10 @@ packages:
   share_plus:
     dependency: "direct main"
     description:
-      name: share_plus
-      sha256: "3424e9d5c22fd7f7590254ba09465febd6f8827c8b19a44350de4ac31d92d3a6"
-      url: "https://pub.dev"
-    source: hosted
-    version: "12.0.0"
+      path: share_plus_patch
+      relative: true
+    source: path
+    version: "12.0.1"
   share_plus_platform_interface:
     dependency: transitive
     description:
@@ -1186,30 +1166,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
-  stripe_android:
-    dependency: transitive
-    description:
-      name: stripe_android
-      sha256: b331722c9b1af59706f3b1bacb78fbd2e3615874103f897a906422e600becfc2
-      url: "https://pub.dev"
-    source: hosted
-    version: "12.0.1"
-  stripe_ios:
-    dependency: transitive
-    description:
-      name: stripe_ios
-      sha256: "5b2d968515baf73073ec29d12b498620f186f375042ff7a74ccf215d2b4bf37d"
-      url: "https://pub.dev"
-    source: hosted
-    version: "12.0.1"
-  stripe_platform_interface:
-    dependency: transitive
-    description:
-      name: stripe_platform_interface
-      sha256: b3536d9e52b419a6fcbe6d8b372dfdddd32631ac7f43a291829a1f201e42f142
-      url: "https://pub.dev"
-    source: hosted
-    version: "12.0.0"
   syncfusion_flutter_core:
     dependency: transitive
     description:

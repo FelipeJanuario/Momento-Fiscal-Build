@@ -43,7 +43,7 @@ class _ProceduralSummaryPageState extends State<ProceduralSummaryPage> {
     super.dispose();
   }
 
-  fetchData() async {
+  Future<void> fetchData() async {
     try {
       AsyncList asyncList = FetchTjEjacData().call(
           cpfCnpj: removeMask(widget.apiCnpj.cnpj),

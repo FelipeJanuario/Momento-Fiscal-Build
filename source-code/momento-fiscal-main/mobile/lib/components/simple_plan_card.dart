@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:momentofiscal/core/models/purchasable_product.dart';
 import 'package:momentofiscal/components/stripe_checkout_button.dart';
-import 'package:momentofiscal/core/utilities/styles_constants.dart';
 
 /// Simplified plan card for web-only Stripe subscriptions
 class SimplePlanCard extends StatelessWidget {

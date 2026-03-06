@@ -133,7 +133,7 @@ class LocationCompaniesRails {
           }
         }
         print('[RAILS] Parseadas ${companies.length} empresas com sucesso');
-        log('[LocationCompaniesRails] Encontradas ${companies.length} empresas para CEP $cep (${digits} dígitos)');
+        log('[LocationCompaniesRails] Encontradas ${companies.length} empresas para CEP $cep ($digits dígitos)');
         return companies;
       } else {
         log('[LocationCompaniesRails] Erro: ${response.statusCode} - ${response.body}');

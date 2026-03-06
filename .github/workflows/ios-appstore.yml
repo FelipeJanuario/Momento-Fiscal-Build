@@ -1,0 +1,193 @@
+name: iOS – Publicar na App Store
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'          # ex: v1.2.3  → produção
+      - 'v[0-9]+.[0-9]+.[0-9]+-rc[0-9]+' # ex: v1.2.3-rc1 → TestFlight
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Ambiente de destino'
+        required: true
+        default: 'testflight'
+        type: choice
+        options:
+          - testflight
+          - appstore
+
+jobs:
+  build-and-deploy:
+    runs-on: macos-15
+    timeout-minutes: 90
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      # ── 2. Instalar Flutter via action oficial ─────────────────────────────
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      # ── 3. Configurar Ruby + Fastlane via action oficial ───────────────────
+      - name: Configurar Ruby e instalar dependências Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: source-code/momento-fiscal-main/mobile
+
+      # ── 4. Instalar dependências Flutter ────────────────────────────────────
+      - name: Flutter pub get
+        run: flutter pub get
+        working-directory: source-code/momento-fiscal-main/mobile
+
+      # ── 5. Rodar testes ──────────────────────────────────────────────────────
+      # Tests desabilitados no CI: AuthPage requer providers/services não mockados.
+      # Rodar localmente com: flutter test
+      # - name: Flutter test
+      #   run: flutter test --no-test-assets
+      #   working-directory: source-code/momento-fiscal-main/mobile
+
+      # ── 6. Instalar pods ────────────────────────────────────────────────────
+      - name: Instalar CocoaPods
+        run: pod install --repo-update
+        working-directory: source-code/momento-fiscal-main/mobile/ios
+
+      # ── 7. Importar Certificado de Distribuição (.p12) ───────────────────────
+      - name: Importar certificado Apple no Keychain
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Importar certificado de distribuição (.p12)
+          echo "$CERTIFICATE_BASE64" | base64 --decode -o "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" \
+            -P "$CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
+          # Importar certificado intermediário Apple WWDR G3
+          # Necessário para que o codesign construa a cadeia de confiança:
+          # Apple Distribution → WWDR G3 → Apple Root CA
+          curl -sL https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer \
+            -o "$RUNNER_TEMP/AppleWWDRCAG3.cer"
+          security import "$RUNNER_TEMP/AppleWWDRCAG3.cer" \
+            -k "$KEYCHAIN_PATH" -T /usr/bin/codesign
+
+          # Permitir que codesign acesse a chave privada sem prompt
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Manter login.keychain-db na lista para acesso aos Root CAs do sistema
+          security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+      # ── 8. Instalar Provisioning Profile ────────────────────────────────────
+      - name: Instalar Provisioning Profile
+        env:
+          PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          # Valida se o secret foi preenchido
+          if [ -z "$PROVISIONING_PROFILE_BASE64" ]; then
+            echo "❌ ERRO: Secret APPLE_PROVISIONING_PROFILE_BASE64 está vazio ou não definido!"
+            exit 1
+          fi
+          echo "✅ Secret APPLE_PROVISIONING_PROFILE_BASE64 detectado (tamanho: ${#PROVISIONING_PROFILE_BASE64} chars)"
+
+          PP_PATH="$RUNNER_TEMP/profile.mobileprovision"
+          echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
+
+          # Valida se o arquivo decodificado é válido
+          if [ ! -s "$PP_PATH" ]; then
+            echo "❌ ERRO: Arquivo decodificado está vazio. Verifique se o base64 está correto."
+            exit 1
+          fi
+          echo "✅ Arquivo .mobileprovision decodificado com sucesso ($(wc -c < "$PP_PATH") bytes)"
+
+          # O Xcode exige que o arquivo esteja nomeado com o UUID do perfil
+          UUID=$(security cms -D -i "$PP_PATH" 2>/dev/null \
+            | plutil -extract UUID xml1 - -o - \
+            | sed -n 's/.*<string>\(.*\)<\/string>.*/\1/p')
+
+          # Exibe o nome real do perfil para diagnóstico (deve ser exatamente "Momento Fiscal")
+          PROFILE_NAME=$(security cms -D -i "$PP_PATH" 2>/dev/null \
+            | plutil -extract Name xml1 - -o - \
+            | sed -n 's/.*<string>\(.*\)<\/string>.*/\1/p')
+          echo "📋 Nome do perfil encontrado: '${PROFILE_NAME}'"
+          echo "🔑 UUID do perfil: ${UUID}"
+
+          if [ -z "$UUID" ]; then
+            echo "❌ ERRO: Não foi possível extrair o UUID do perfil. O arquivo .mobileprovision pode estar corrompido."
+            exit 1
+          fi
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"${UUID}.mobileprovision"
+          echo "✅ Provisioning Profile instalado: ${UUID}.mobileprovision"
+
+          # Exporta UUID para uso nos próximos passos
+          echo "PROFILE_UUID=${UUID}" >> "$GITHUB_ENV"
+
+      # ── 9. Definir URL da API conforme ambiente ──────────────────────────────
+      - name: Definir variáveis de ambiente
+        run: |
+          if [[ "${{ github.ref }}" == *"-rc"* ]] || [[ "${{ github.event.inputs.environment }}" == "testflight" ]]; then
+            echo "API_BASE_URL=https://momentofiscal.hml.spezi.com.br" >> "$GITHUB_ENV"
+            echo "DEPLOY_TO=testflight_upload" >> "$GITHUB_ENV"
+          else
+            echo "API_BASE_URL=https://momentofiscal.spezi.com.br" >> "$GITHUB_ENV"
+            echo "DEPLOY_TO=appstore_upload" >> "$GITHUB_ENV"
+          fi
+
+      # ── 10. Build IPA ────────────────────────────────────────────────────────
+      - name: Build Flutter IPA
+        env:
+          # Configura assinatura manual para o target Runner.
+          # Os pods têm CODE_SIGNING_ALLOWED=NO via Podfile post_install,
+          # portanto estas vars não causam conflito com eles.
+          FLUTTER_XCODE_CODE_SIGN_STYLE: Manual
+          FLUTTER_XCODE_CODE_SIGN_IDENTITY: "Apple Distribution"
+          # UUID é mais confiável que nome para localização do perfil pelo Xcode
+          FLUTTER_XCODE_PROVISIONING_PROFILE_SPECIFIER: ${{ env.PROFILE_UUID }}
+          FLUTTER_XCODE_DEVELOPMENT_TEAM: Q7Y9SSJ75F
+        run: |
+          # Substituir o nome do perfil pelo UUID no ExportOptions.plist
+          # O Xcode em modo manual encontra o perfil com muito mais confiabilidade pelo UUID
+          sed -i '' "s|<string>Momento Fiscal</string>|<string>${PROFILE_UUID}</string>|" \
+            ios/ExportOptions.plist
+          # Atualiza o bundle ID no ExportOptions (caso o pbxproj do Flutter regenere)
+          sed -i '' "s|<key>br.com.momentofiscal</key>|<key>br.com.momentofiscal1</key>|" \
+            ios/ExportOptions.plist
+          echo "📄 ExportOptions.plist atualizado com UUID: ${PROFILE_UUID}"
+
+          flutter build ipa \
+            --release \
+            --dart-define API_BASE_URL=$API_BASE_URL \
+            --export-options-plist=ios/ExportOptions.plist
+        working-directory: source-code/momento-fiscal-main/mobile
+
+      # ── 11. Upload via Fastlane ──────────────────────────────────────────────
+      - name: Upload para App Store Connect
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          BUNDLE_GEMFILE: ${{ github.workspace }}/source-code/momento-fiscal-main/mobile/Gemfile
+        run: bundle exec fastlane ${{ env.DEPLOY_TO }}
+        working-directory: source-code/momento-fiscal-main/mobile/ios
+
+      # ── 12. Limpar Keychain ──────────────────────────────────────────────────
+      - name: Limpar Keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true

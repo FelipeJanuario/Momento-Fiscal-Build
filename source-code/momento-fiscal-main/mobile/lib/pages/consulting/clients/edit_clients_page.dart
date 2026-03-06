@@ -59,7 +59,7 @@ class _EditClientsPageState extends State<EditClientsPage> {
     birthDateController.text = DateFormat("dd/MM/yyyy").format(isBirthDate!);
   }
 
-  _clickButton(BuildContext context) async {
+  Future<void> _clickButton(BuildContext context) async {
     bool formValidate = _formKey.currentState!.validate();
     if (!formValidate) return;
 
@@ -208,7 +208,7 @@ class _EditClientsPageState extends State<EditClientsPage> {
                     ),
                     const SizedBox(height: 20),
                     DropdownButtonFormField<String>(
-                      value: sex,
+                      initialValue: sex,
                       items: _dropdownItems,
                       onChanged: (value) {
                         setState(() {

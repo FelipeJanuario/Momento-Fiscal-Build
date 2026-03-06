@@ -81,7 +81,7 @@ class _FinancialAnalysisPageState extends State<FinancialAnalysisPage> {
     }
   }
 
-  _fetchData() async {
+  Future<void> _fetchData() async {
     setState(() {
       isLoading = true;
     });
@@ -102,7 +102,7 @@ class _FinancialAnalysisPageState extends State<FinancialAnalysisPage> {
     var processJusbrasil = ProcessJusbrasil(); // Instância da classe
     Stream<List<Jusbrasil>> stream = processJusbrasil.getProcessesCpfCnpjStream(
       cpfCnpj: widget.debts != null
-          ? widget.debts!?.first?.cpfCnpj ?? ""
+          ? widget.debts!.first.cpfCnpj ?? ""
           : widget.isCpfNotSerpro != null
               ? widget.isCpfNotSerpro!
               : widget.apiCnpj!.cnpj,
@@ -239,7 +239,7 @@ class _FinancialAnalysisPageState extends State<FinancialAnalysisPage> {
                   color: Colors.white,
                   child: ListTile(
                     title: Text(
-                      widget.debts!?.first?.debtedName ?? "",
+                      widget.debts!.first.debtedName ?? "",
                       style: const TextStyle(
                           fontSize: 15,
                           color: colorPrimaty,
@@ -249,7 +249,7 @@ class _FinancialAnalysisPageState extends State<FinancialAnalysisPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        Text('CPF: ${widget.debts!?.first?.cpfCnpj ?? ""}')
+                        Text('CPF: ${widget.debts!.first.cpfCnpj ?? ""}')
                       ],
                     ),
                   ),

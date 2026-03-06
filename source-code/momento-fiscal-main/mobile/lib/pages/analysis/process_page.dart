@@ -55,11 +55,11 @@ class ProcessPage extends StatelessWidget {
                 ),
               ] else if (listDebts != null) ...[
                 Text(
-                  listDebts?.first?.debtedName ?? "NOME NÃO REGISTRADO",
+                  listDebts?.first.debtedName ?? "NOME NÃO REGISTRADO",
                   style: const TextStyle(fontSize: 16),
                 ),
                 Text(
-                  listDebts?.first?.cpfCnpj ?? '',
+                  listDebts?.first.cpfCnpj ?? '',
                   style: const TextStyle(fontSize: 16),
                 ),
               ],

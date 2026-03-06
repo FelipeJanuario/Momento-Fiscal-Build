@@ -21,7 +21,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
-  _clickButton(BuildContext context) async {
+  Future<void> _clickButton(BuildContext context) async {
     bool formValidate = _formKey.currentState!.validate();
 
     if (!formValidate) {

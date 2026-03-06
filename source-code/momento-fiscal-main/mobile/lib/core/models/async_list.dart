@@ -9,7 +9,7 @@ class AsyncList<t> with ChangeNotifier implements Iterable<t> {
     this.steps = 0,
     this.total = 0,
   }) {
-    this.items = <t>[];
+    items = <t>[];
   }
 
   void addAll(Iterable<t> iterable) {

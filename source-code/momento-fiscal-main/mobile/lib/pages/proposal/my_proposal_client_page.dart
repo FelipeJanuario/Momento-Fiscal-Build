@@ -273,7 +273,7 @@ class _MyProposalClientPageState extends State<MyProposalClientPage> {
                               ),
                               const SizedBox(height: 20),
                               DropdownButtonFormField<String>(
-                                value: _selectedStatus,
+                                initialValue: _selectedStatus,
                                 items: dropdownItemsStatus,
                                 decoration: const InputDecoration(
                                   labelText: 'Status',

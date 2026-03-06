@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- "app-store" para publicação na App Store / TestFlight -->
+    <key>method</key>
+    <string>app-store</string>
+
+    <key>teamID</key>
+    <string>Q7Y9SSJ75F</string>
+
+    <!-- Desativa o gerenciamento automático de assinatura para o CI -->
+    <key>signingStyle</key>
+    <string>manual</string>
+
+    <!-- Nome do Provisioning Profile cadastrado na Apple Developer Portal -->
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>br.com.momentofiscal1</key>
+        <string>Momento Fiscal</string>
+    </dict>
+
+    <key>uploadBitcode</key>
+    <false/>
+
+    <key>uploadSymbols</key>
+    <true/>
+
+    <key>compileBitcode</key>
+    <false/>
+</dict>
+</plist>

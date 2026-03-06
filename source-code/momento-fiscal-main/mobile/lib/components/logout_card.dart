@@ -3,7 +3,7 @@ import 'package:momentofiscal/core/services/auth/auth_rails_service.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
 import 'package:momentofiscal/pages/login/auth_page.dart';
 
-logoutCard(BuildContext context) {
+void logoutCard(BuildContext context) {
   showDialog(
     context: context,
     builder: (BuildContext context) {

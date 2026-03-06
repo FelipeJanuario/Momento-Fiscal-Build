@@ -13,7 +13,6 @@ import 'package:momentofiscal/pages/consulting/clients/consulting_page.dart';
 import 'package:momentofiscal/pages/consulting/management/consulting_management_page.dart';
 import 'package:momentofiscal/pages/institution/institution_page.dart';
 import 'package:momentofiscal/pages/location/authorized_location_page.dart';
-import 'package:momentofiscal/pages/location/search_by_location_page.dart';
 import 'package:momentofiscal/pages/location/search_by_location_osm_page.dart';
 import 'package:momentofiscal/pages/plans/verify_plans_page.dart';
 import 'package:momentofiscal/pages/proposal/my_proposal_client_page.dart';

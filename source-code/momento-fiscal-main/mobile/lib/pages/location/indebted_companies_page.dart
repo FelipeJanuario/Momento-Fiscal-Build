@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:momentofiscal/components/company_card.dart';
 import 'package:momentofiscal/core/models/company.dart';
 import 'package:momentofiscal/core/services/biddingAnalyser/location/location_compaines_rails.dart';
-import 'package:momentofiscal/pages/location/search_by_location_osm_page.dart';
 
 // ignore: must_be_immutable
 class IndebtedCompaniesPage extends StatefulWidget {

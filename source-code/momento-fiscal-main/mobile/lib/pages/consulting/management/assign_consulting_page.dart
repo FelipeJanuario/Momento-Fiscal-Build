@@ -66,7 +66,7 @@ class _AssignConsultingPageState extends State<AssignConsultingPage> {
     }).toList();
   }
 
-  _clickButton(BuildContext context) async {
+  Future<void> _clickButton(BuildContext context) async {
     bool formValidate = _formKey.currentState!.validate();
     if (!formValidate) return;
 
@@ -148,7 +148,7 @@ class _AssignConsultingPageState extends State<AssignConsultingPage> {
               Form(
                 key: _formKey,
                 child: DropdownButtonFormField<String>(
-                  value: users.any((user) => user.id == consulting.consultantId)
+                  initialValue: users.any((user) => user.id == consulting.consultantId)
                       ? consulting.consultantId
                       : null,
                   items: getDropdownItems(),

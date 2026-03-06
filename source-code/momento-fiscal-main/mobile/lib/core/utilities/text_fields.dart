@@ -103,7 +103,7 @@ Widget dropdownInput({
       const SizedBox(height: 10),
       DropdownButtonFormField<String>(
         key: key,
-        value: value,
+        initialValue: value,
         items: items,
         onChanged: onChanged,
         validator: validator,
