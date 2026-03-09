@@ -16,6 +16,7 @@ class Estabelecimento < ApplicationRecord
 
   # Scopes
   scope :ativas, -> { where(situacao_cadastral: ATIVA) }
+  scope :devedoras_ativas, -> { where('debt_count > 0') }
   scope :matrizes, -> { where(identificador_matriz_filial: 1) }
   scope :filiais, -> { where(identificador_matriz_filial: 2) }
   scope :geocodificadas, -> { where.not(latitude: nil, longitude: nil) }

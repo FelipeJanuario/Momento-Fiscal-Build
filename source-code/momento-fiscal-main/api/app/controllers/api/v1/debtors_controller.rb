@@ -28,6 +28,7 @@ class Api::V1::DebtorsController < ApplicationController
     # Busca estabelecimentos ativos com CEP na região
     estabelecimentos = Estabelecimento
       .ativas
+      .devedoras_ativas
       .where('cep LIKE ?', "#{cep_prefix}%")
       .includes(:empresa)
     
@@ -135,6 +136,7 @@ class Api::V1::DebtorsController < ApplicationController
     # Query simples com bounding box (sem cálculo de distância no SQL)
     estabelecimentos = Estabelecimento
       .ativas
+      .devedoras_ativas
       .geocodificadas
       .where('latitude BETWEEN ? AND ?', min_lat, max_lat)
       .where('longitude BETWEEN ? AND ?', min_lng, max_lng)

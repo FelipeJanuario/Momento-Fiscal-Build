@@ -8,12 +8,14 @@ import 'package:momentofiscal/core/utilities/validations.dart';
 
 var sanitizedUrl = ApiConstants.url.replaceFirst(RegExp(r'^https?://'), '');
 
-/// Helper para criar URI baseado no devMode (http vs https)
+/// Helper para criar URI — detecta o esquema (http/https) diretamente de ApiConstants.url
+/// Isso evita o problema de devMode=false gerar https://localhost:3000
 Uri _buildUri(String path, Map<String, dynamic> queryParams) {
-  if (ApiConstants.devMode) {
-    return Uri.http(sanitizedUrl, path, queryParams);
-  } else {
+  final usesHttps = ApiConstants.url.startsWith('https://');
+  if (usesHttps) {
     return Uri.https(sanitizedUrl, path, queryParams);
+  } else {
+    return Uri.http(sanitizedUrl, path, queryParams);
   }
 }
 
@@ -142,6 +144,57 @@ class LocationCompaniesRails {
     } catch (e) {
       print('[RAILS] EXCEPTION: $e');
       log('[LocationCompaniesRails] Erro em getInLocationByCep: $e');
+      return [];
+    }
+  }
+
+  /// Busca empresas por coordenadas GPS — fallback quando CEP não está disponível
+  /// Usa o endpoint /nearby com lat/lng direto e raio em km
+  Future<List<Company>> getInLocationByCoordinates({
+    required double lat,
+    required double lng,
+    double radiusKm = 50.0,
+    int page = 1,
+    int pageSize = 100,
+  }) async {
+    final url = _buildUri(
+      '/api/v1/debtors/nearby',
+      {
+        'lat': lat.toString(),
+        'lng': lng.toString(),
+        'radius_km': radiusKm.toString(),
+        'page': page.toString(),
+        'page_size': pageSize.toString(),
+      },
+    );
+
+    log('[LocationCompaniesRails] Fallback nearby URL: $url');
+    print('[RAILS] Fallback nearby: $url');
+
+    try {
+      final response = await http.get(url, headers: {'Content-Type': 'application/json'});
+      log('[LocationCompaniesRails] nearby status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        final List<Company> companies = [];
+        if (responseBody['companies'] is List) {
+          for (final company in responseBody['companies']) {
+            try {
+              companies.add(Company.fromJson(company));
+            } catch (e) {
+              print('[RAILS] Erro ao parsear empresa (nearby): $e');
+            }
+          }
+        }
+        log('[LocationCompaniesRails] nearby: ${companies.length} empresas encontradas');
+        return companies;
+      } else {
+        log('[LocationCompaniesRails] nearby erro: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      log('[LocationCompaniesRails] Erro em getInLocationByCoordinates: $e');
       return [];
     }
   }
