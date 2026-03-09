@@ -73,7 +73,7 @@ class PurchasesConfiguration {
 /// A [PurchasesConfiguration] convenience object that
 /// sets [PurchasesConfiguration.store] to [Store.amazon]
 class AmazonConfiguration extends PurchasesConfiguration {
-  AmazonConfiguration(String apiKey) : super(apiKey) {
+  AmazonConfiguration(super.apiKey) {
     store = Store.amazon;
   }
 }
