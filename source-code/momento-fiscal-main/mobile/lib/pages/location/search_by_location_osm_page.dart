@@ -142,8 +142,15 @@ class _SearchByLocationOsmPageState extends State<SearchByLocationOsmPage> {
       print('[OSM] ${companies.length} empresas encontradas');
       log('[SearchByLocationOsmPage] ${companies.length} empresas encontradas');
       
-      if (companies.isEmpty) {
-        _showMessage('Nenhuma empresa encontrada na região do CEP ${cep.substring(0, _cepDigits)}xxx');
+      if (companies.isEmpty && _userPosition != null) {
+        // CEP não retornou resultados — fallback para busca por coordenadas
+        // que usa expansão progressiva e ordenação por maior dívida
+        print('[OSM] Nenhum resultado por CEP. Fallback para busca por coordenadas...');
+        setState(() => _isApproximateLocation = true);
+        await _loadCompaniesByCoordinates(_userPosition!.latitude, _userPosition!.longitude);
+        return;
+      } else if (companies.isEmpty) {
+        _showMessage('Nenhuma empresa devedora encontrada na região');
       } else {
         // Conta quantas empresas precisam de geocodificação
         final semCoordenadas = companies.where((c) => c.latitude == null || c.longitude == null).length;

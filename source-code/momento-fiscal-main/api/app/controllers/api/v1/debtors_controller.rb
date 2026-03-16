@@ -37,7 +37,7 @@ class Api::V1::DebtorsController < ApplicationController
     total_pages = (total_count.to_f / page_size).ceil
     
     estabelecimentos = estabelecimentos
-      .order(:nome_fantasia, :cnpj_completo)
+      .order(Arel.sql('COALESCE(debt_value, 0) DESC, nome_fantasia ASC'))
       .offset((page - 1) * page_size)
       .limit(page_size)
     
@@ -122,70 +122,53 @@ class Api::V1::DebtorsController < ApplicationController
       return
     end
     
-    # Busca estabelecimentos na região usando bounding box
-    # Cálculo aproximado: 1° latitude ≈ 111km
-    # 1° longitude ≈ 111km * cos(latitude)
-    lat_delta = radius_km / 111.0
-    lng_delta = radius_km / (111.0 * Math.cos(lat * Math::PI / 180.0))
+    # Expansão progressiva: tenta o raio solicitado, depois expande gradativamente
+    expansion_radii = [radius_km, 50, 150, 500].uniq.select { |r| r >= radius_km }.sort
+    actual_radius = radius_km
+    estabelecimentos = nil
+    total_count = 0
+    global_search = false
     
-    min_lat = lat - lat_delta
-    max_lat = lat + lat_delta
-    min_lng = lng - lng_delta
-    max_lng = lng + lng_delta
+    expansion_radii.each do |try_radius|
+      estabelecimentos = establishments_in_radius(lat, lng, try_radius)
+      total_count = estabelecimentos.count
+      actual_radius = try_radius
+      break if total_count > 0
+    end
     
-    # Query simples com bounding box (sem cálculo de distância no SQL)
-    estabelecimentos = Estabelecimento
-      .ativas
-      .devedoras_ativas
-      .geocodificadas
-      .where('latitude BETWEEN ? AND ?', min_lat, max_lat)
-      .where('longitude BETWEEN ? AND ?', min_lng, max_lng)
-      .includes(:empresa)
+    # Se nenhum raio retornou resultados, busca global ordenada por proximidade
+    if total_count == 0
+      global_search = true
+      lat_val = lat.to_f
+      lng_val = lng.to_f
+      estabelecimentos = Estabelecimento
+        .ativas
+        .devedoras_ativas
+        .geocodificadas
+        .includes(:empresa)
+        .order(Arel.sql("((latitude - #{lat_val}) * (latitude - #{lat_val})) + ((longitude - #{lng_val}) * (longitude - #{lng_val})) ASC"))
+      total_count = estabelecimentos.count
+    end
     
-    # Paginação
-    total_count = estabelecimentos.count
     total_pages = (total_count.to_f / page_size).ceil
     
     estabelecimentos = estabelecimentos
       .offset((page - 1) * page_size)
       .limit(page_size)
     
-    # Serializa resposta (calcula distância em Ruby)
+    # Serializa resposta (calcula distância exata em Ruby)
+    # Ordena por maior dívida primeiro ("Maiores devedores próximos")
     companies = estabelecimentos.map do |est|
       distance = haversine_distance(lat, lng, est.latitude.to_f, est.longitude.to_f)
-      {
-        id: est.id.to_s,
-        cnpj: est.cnpj_completo,
-        corporate_name: est.empresa&.razao_social || 'N/A',
-        fantasy_name: est.nome_fantasia || est.empresa&.razao_social,
-        address: {
-          street: [est.tipo_logradouro, est.logradouro].compact.join(' '),
-          number: est.numero,
-          complement: est.complemento,
-          neighborhood: est.bairro,
-          city: est.municipio,
-          state: est.uf,
-          zip_code: format_cep(est.cep),
-          # Adiciona geographic_coordinate para compatibilidade com o modelo Flutter
-          geographic_coordinate: {
-            type: "Point",
-            coordinates: [est.longitude.to_f, est.latitude.to_f] # [lng, lat] - padrão GeoJSON
-          }
-        },
-        latitude: est.latitude.to_f,
-        longitude: est.longitude.to_f,
-        distance_km: distance.round(2),
-        debts_value: est.debt_value&.to_f || 0,
-        debts_count: est.debt_count || 0
-      }
-    end.sort_by { |c| c[:distance_km] }
+      serialize_nearby_establishment(est, distance)
+    end.sort_by { |c| -(c[:debts_value] || 0) }
     
     render json: {
       companies: companies,
       total_count: total_count,
       current_page: page,
       total_pages: total_pages,
-      radius_km: radius_km,
+      radius_km: global_search ? 'global' : actual_radius,
       center: { lat: lat, lng: lng }
     }
   end
@@ -442,7 +425,49 @@ class Api::V1::DebtorsController < ApplicationController
   end
   
   private
-  
+
+  # Busca estabelecimentos devedores ativos dentro de um raio (bounding box)
+  def establishments_in_radius(lat, lng, radius_km)
+    lat_delta = radius_km / 111.0
+    lng_delta = radius_km / (111.0 * Math.cos(lat * Math::PI / 180.0))
+
+    Estabelecimento
+      .ativas
+      .devedoras_ativas
+      .geocodificadas
+      .where('latitude BETWEEN ? AND ?', lat - lat_delta, lat + lat_delta)
+      .where('longitude BETWEEN ? AND ?', lng - lng_delta, lng + lng_delta)
+      .includes(:empresa)
+  end
+
+  # Serializa um estabelecimento para a resposta do endpoint nearby
+  def serialize_nearby_establishment(est, distance)
+    {
+      id: est.id.to_s,
+      cnpj: est.cnpj_completo,
+      corporate_name: est.empresa&.razao_social || 'N/A',
+      fantasy_name: est.nome_fantasia || est.empresa&.razao_social,
+      address: {
+        street: [est.tipo_logradouro, est.logradouro].compact.join(' '),
+        number: est.numero,
+        complement: est.complemento,
+        neighborhood: est.bairro,
+        city: est.municipio,
+        state: est.uf,
+        zip_code: format_cep(est.cep),
+        geographic_coordinate: {
+          type: "Point",
+          coordinates: [est.longitude.to_f, est.latitude.to_f]
+        }
+      },
+      latitude: est.latitude.to_f,
+      longitude: est.longitude.to_f,
+      distance_km: distance.round(2),
+      debts_value: est.debt_value&.to_f || 0,
+      debts_count: est.debt_count || 0
+    }
+  end
+
   # Calcula distância usando fórmula Haversine (em Ruby)
   def haversine_distance(lat1, lng1, lat2, lng2)
     rad_per_deg = Math::PI / 180
