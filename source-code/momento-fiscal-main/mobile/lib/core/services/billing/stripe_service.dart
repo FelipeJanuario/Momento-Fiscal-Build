@@ -25,7 +25,7 @@ class StripeService {
 
       // Busca produtos do Stripe
       var response = await http.get(
-        Uri.parse("${ApiConstants.baseUrl}/products"),
+        Uri.parse("${ApiConstants.baseUrl}/stripe/products"),
         headers: headers,
       );
 
@@ -41,7 +41,7 @@ class StripeService {
       for (var product in products) {
         // Busca preços para cada produto
         var priceResponse = await http.get(
-          Uri.parse("${ApiConstants.baseUrl}/products/${product['id']}/prices"),
+          Uri.parse("${ApiConstants.baseUrl}/stripe/products/${product['id']}/prices"),
           headers: headers,
         );
 
@@ -96,7 +96,7 @@ class StripeService {
         .toList();
   }
 
-  /// Cria uma sessão de checkout do Stripe
+  /// Cria uma sessão de checkout hospedada do Stripe e retorna a URL
   Future<String> createCheckoutSession({
     required String priceId,
     required String customerEmail,
@@ -115,7 +115,7 @@ class StripeService {
       });
 
       var response = await http.post(
-        Uri.parse("${ApiConstants.baseUrl}/subscriptions"),
+        Uri.parse("${ApiConstants.baseUrl}/stripe/checkout_session"),
         headers: headers,
         body: body,
       );
@@ -125,7 +125,7 @@ class StripeService {
       }
 
       var data = json.decode(response.body);
-      return data['clientSecret'];
+      return data['checkout_url'];
 
     } catch (e) {
       Logger.log('Error creating checkout session: $e', level: LoggerLevel.error, error: e);
@@ -144,7 +144,7 @@ class StripeService {
       };
 
       var response = await http.get(
-        Uri.parse("${ApiConstants.baseUrl}/subscriptions"),
+        Uri.parse("${ApiConstants.baseUrl}/stripe/subscriptions"),
         headers: headers,
       );
 
@@ -175,7 +175,7 @@ class StripeService {
       };
 
       var response = await http.delete(
-        Uri.parse("${ApiConstants.baseUrl}/subscriptions/$subscriptionId"),
+        Uri.parse("${ApiConstants.baseUrl}/stripe/subscriptions/$subscriptionId"),
         headers: headers,
       );
 
@@ -188,6 +188,91 @@ class StripeService {
     } catch (e) {
       Logger.log('Error cancelling subscription: $e', level: LoggerLevel.error, error: e);
       rethrow;
+    }
+  }
+
+  /// Busca features habilitadas para o usuário (entitlements Stripe)
+  Future<List<String>> getEnabledFeatures() async {
+    try {
+      String? token = await _storage.read(key: 'token');
+      
+      var headers = {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json'
+      };
+
+      var response = await http.get(
+        Uri.parse("${ApiConstants.baseUrl}/stripe/enabled_features"),
+        headers: headers,
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load features: ${response.statusCode}');
+      }
+
+      var data = json.decode(response.body) as List<dynamic>;
+      return data.map((e) => e.toString()).toList();
+
+    } catch (e) {
+      Logger.log('Error loading enabled features: $e', level: LoggerLevel.error, error: e);
+      return [];
+    }
+  }
+
+  /// Busca preços para um produto específico
+  Future<List<dynamic>> getPrices(String productId) async {
+    try {
+      String? token = await _storage.read(key: 'token');
+      
+      var headers = {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json'
+      };
+
+      var response = await http.get(
+        Uri.parse("${ApiConstants.baseUrl}/stripe/products/$productId/prices"),
+        headers: headers,
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load prices: ${response.statusCode}');
+      }
+
+      var data = json.decode(response.body);
+      return data['data'] as List<dynamic>;
+
+    } catch (e) {
+      Logger.log('Error loading prices: $e', level: LoggerLevel.error, error: e);
+      return [];
+    }
+  }
+
+  /// Busca a assinatura corrente do usuário
+  Future<Map<String, dynamic>?> getCurrentSubscription() async {
+    try {
+      String? token = await _storage.read(key: 'token');
+      
+      var headers = {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json'
+      };
+
+      var response = await http.get(
+        Uri.parse("${ApiConstants.baseUrl}/stripe/current_subscription"),
+        headers: headers,
+      );
+
+      if (response.statusCode != 200) {
+        return null;
+      }
+
+      var data = json.decode(response.body);
+      if (data == null || (data is Map && data.isEmpty)) return null;
+      return data as Map<String, dynamic>;
+
+    } catch (e) {
+      Logger.log('Error loading current subscription: $e', level: LoggerLevel.error, error: e);
+      return null;
     }
   }
 }

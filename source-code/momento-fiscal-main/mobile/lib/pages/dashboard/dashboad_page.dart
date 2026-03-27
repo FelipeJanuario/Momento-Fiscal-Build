@@ -4,10 +4,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:momentofiscal/components/card_upgrade_plans.dart';
 import 'package:momentofiscal/components/logout_card.dart';
 import 'package:momentofiscal/components/on_selected_popup.dart';
 import 'package:momentofiscal/core/services/freePlanUsage/free_plans_usages_rails_servide.dart';
 import 'package:momentofiscal/core/services/storage/storage_service.dart';
+import 'package:momentofiscal/core/utilities/plan_features.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
 import 'package:momentofiscal/pages/consulting/clients/consulting_page.dart';
 import 'package:momentofiscal/pages/consulting/management/consulting_management_page.dart';
@@ -18,6 +20,7 @@ import 'package:momentofiscal/pages/plans/verify_plans_page.dart';
 import 'package:momentofiscal/pages/proposal/my_proposal_client_page.dart';
 import 'package:momentofiscal/core/services/auth/auth_rails_service.dart';
 import 'package:momentofiscal/pages/search/cnpj_cpf_page.dart';
+import 'package:momentofiscal/pages/search/municipio_search_page.dart';
 import 'package:momentofiscal/pages/search/process_search_page.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
@@ -34,6 +37,7 @@ class _DashboadPageState extends State<DashboadPage> {
   LocationPermission? permission;
   String? userRole;
   String? id;
+  String? planLevel;
   bool isSubscribed = false;
   String? activePlan;
   bool isCustomerStatusUpdated = false;
@@ -49,7 +53,35 @@ class _DashboadPageState extends State<DashboadPage> {
     await AuthRailsService().loadUserFromCache();
     
     await checkLocationPermission(); // Carrega id e userRole
+    await _loadPlanLevel();
     await checkIsSubscription(); // Agora id já está carregado
+  }
+
+  Future<void> _loadPlanLevel() async {
+    final level = await storage.read(key: 'planLevel');
+    if (mounted) {
+      setState(() {
+        planLevel = level;
+      });
+    }
+  }
+
+  /// Navega para [page] apenas se o plano do usuário atender ao [requiredPlan].
+  /// Caso contrário, exibe diálogo de upgrade.
+  void _navigateWithPlanCheck(Widget page, String requiredPlan) {
+    if (PlanFeatures.hasAccess(
+        currentPlan: planLevel, requiredPlan: requiredPlan, userRole: userRole)) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => page),
+      );
+    } else {
+      final planName = PlanFeatures.displayName(requiredPlan);
+      cardUpgradePlans(
+        context: context,
+        text: 'Esta funcionalidade requer o Plano $planName ou superior. '
+            'Faça o upgrade para continuar.',
+      );
+    }
   }
 
   Future updateCustomerStatus() async {
@@ -281,20 +313,31 @@ class _DashboadPageState extends State<DashboadPage> {
                 subtitle: 'Verifique se um CPF/CNPJ tem dívidas com a União',
                 icon: Icons.article,
                 onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (context) => const CnpjCpfPage()),
+                  _navigateWithPlanCheck(
+                    const CnpjCpfPage(),
+                    PlanFeatures.bronze,
                   );
                 },
               ),
               _buildCard(
                 title: 'Consultar Processos',
-                subtitle: 'Busque processos judiciais por número (CNJ)',
+                subtitle: 'Busque processos judiciais por CPF ou CNPJ',
                 icon: Icons.gavel,
                 onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (context) => const ProcessSearchPage()),
+                  _navigateWithPlanCheck(
+                    const ProcessSearchPage(),
+                    PlanFeatures.bronze,
+                  );
+                },
+              ),
+              _buildCard(
+                title: 'Consulta por Município',
+                subtitle: 'Verifique dados fiscais de municípios brasileiros',
+                icon: Icons.location_city,
+                onTap: () {
+                  _navigateWithPlanCheck(
+                    const MunicipioSearchPage(),
+                    PlanFeatures.prata,
                   );
                 },
               ),
@@ -303,11 +346,12 @@ class _DashboadPageState extends State<DashboadPage> {
                 subtitle: 'Encontre os maiores devedores próximos a você',
                 icon: Icons.location_on,
                 onTap: () {
+                  // Localize Devedores é liberado para todos os planos (free)
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) =>
                           permission == LocationPermission.whileInUse
-                              ? const SearchByLocationOsmPage() // Nova página OSM (100% gratuita)
+                              ? const SearchByLocationOsmPage()
                               : const AuthorizedLocation(),
                     ),
                   );

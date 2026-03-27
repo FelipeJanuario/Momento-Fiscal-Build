@@ -95,7 +95,7 @@ class User < ApplicationRecord
   end
 
   def create_stripe_customer
-    return if Rails.env.test? || stripe_customer_id.present? || ENV['DEV_MODE'] == 'true'
+    return if Rails.env.test? || stripe_customer_id.present?
 
     stripe_customer = Stripe::Customer.create(email:, name:, phone:, preferred_locales: %w[pt-BR pt en],
                                               metadata: { user_id: id })

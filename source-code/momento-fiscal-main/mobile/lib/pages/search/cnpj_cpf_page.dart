@@ -19,6 +19,8 @@ import 'package:momentofiscal/core/services/institution/institution_rails_servic
 import 'package:momentofiscal/core/services/processDataCrawlers/fetch_tj_data.dart';
 import 'package:momentofiscal/core/services/processDataCrawlers/process_jusbrasil_service.dart';
 import 'package:momentofiscal/core/services/serpro/serpro_service.dart';
+import 'package:momentofiscal/core/services/transparencia/transparencia_service.dart';
+import 'package:momentofiscal/core/models/sancao.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
 import 'package:momentofiscal/core/utilities/validations.dart';
 import 'package:momentofiscal/core/services/storage/storage_service.dart';
@@ -47,6 +49,7 @@ class _CnpjCpfPageState extends State<CnpjCpfPage> {
   Company? company;
   bool isLoading = false;
   bool isCpf = false;
+  SancoesResult? sancoesResult;
   late MaskedInputFormatter _cpfCnpjFormatter;
   StreamSubscription<List<Jusbrasil>>? _streamSubscription;
 
@@ -121,6 +124,7 @@ class _CnpjCpfPageState extends State<CnpjCpfPage> {
       isLoading = true;
       debts = [];
       apiCnpj = null;
+      sancoesResult = null;
     });
 
     final textLength = cnpjController.text.length;
@@ -142,6 +146,15 @@ class _CnpjCpfPageState extends State<CnpjCpfPage> {
       }
 
       await verifyInstitutionUser(cnpj: removeMask(cnpjController.text));
+
+      // Consultar sanções (CEIS, CNEP, CEPIM, CEAF)
+      final sancoes = await TransparenciaService()
+          .consultarSancoes(cpfCnpj: removeMask(cnpjController.text));
+      if (mounted) {
+        setState(() {
+          sancoesResult = sancoes;
+        });
+      }
     } catch (e) {
       _showError(
         'O serviço do Jusbrasil está temporariamente indisponível. Por favor, tente novamente em alguns minutos.'
@@ -449,6 +462,7 @@ class _CnpjCpfPageState extends State<CnpjCpfPage> {
             isConsultant:
                 role == "consultant" || role == "admin" ? true : false,
           ),
+          if (sancoesResult != null) _buildSancoesSection(),
         ],
       );
     } else if (isCpf) {
@@ -461,6 +475,7 @@ class _CnpjCpfPageState extends State<CnpjCpfPage> {
             isConsultant:
                 role == "consultant" || role == "admin" ? true : false,
           ),
+          if (sancoesResult != null) _buildSancoesSection(),
         ],
       );
     } else {
@@ -468,5 +483,40 @@ class _CnpjCpfPageState extends State<CnpjCpfPage> {
         children: [Text("Dado não encontrado")],
       );
     }
+  }
+
+  Widget _buildSancoesSection() {
+    final total = sancoesResult!.total;
+    return Card.outlined(
+      child: ExpansionTile(
+        title: Text(
+          'Sanções ($total)',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        leading: Icon(
+          total > 0 ? Icons.warning_amber : Icons.check_circle,
+          color: total > 0 ? Colors.orange : Colors.green,
+        ),
+        subtitle: Text(
+          total > 0
+              ? 'Encontradas $total sanções nos cadastros CEIS/CNEP/CEPIM/CEAF'
+              : 'Nenhuma sanção encontrada',
+        ),
+        children: sancoesResult!.sancoes.isEmpty
+            ? [
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('Nenhuma sanção encontrada nos cadastros federais.'),
+                ),
+              ]
+            : sancoesResult!.sancoes.map<Widget>((s) {
+                return ListTile(
+                  title: Text(s.tipoCadastro),
+                  subtitle: Text(s.nomeOrgaoSancionador ?? ''),
+                  trailing: Text(s.dataInicioSancao ?? ''),
+                );
+              }).toList(),
+      ),
+    );
   }
 }

@@ -77,32 +77,30 @@ class InAppPurchaseService {
         ProductDetails(
           id: 'free',
           title: 'Plano Free',
-          description: 'Funcionalidades Básicas',
+          description: 'Acesso básico por 7 dias',
           price: 'R\$ 0,00',
           rawPrice: 0.0,
           currencyCode: 'BRL',
         ),
         features: [
-          'Devedores próximos',
-          'Relatórios essenciais',
-          'CRM básico',
+          'Localizar Devedores próximos',
+          'Acesso básico por 7 dias',
         ]
       ),
       PurchasableProduct(
         ProductDetails(
           id: 'bronze',
           title: 'Plano Bronze',
-        description: 'Funcionalidades Básicas',
-        price: 'R\$ 199,99',
-        rawPrice: 199.99,
-        currencyCode: 'BRL',
+          description: 'Funcionalidades essenciais',
+          price: 'R\$ 199,99',
+          rawPrice: 199.99,
+          currencyCode: 'BRL',
         ),
         features: [
-          'Devedores próximos',
-          'Relatórios essenciais',
-          'CRM básico',
+          'Tudo do Plano Free',
+          'Consultar Devedores (CPF/CNPJ)',
+          'Consultar Processos Judiciais',
           'Suporte por e-mail',
-          'Integrações básicas',
         ]
       ),
       PurchasableProduct(
@@ -116,10 +114,9 @@ class InAppPurchaseService {
           ),
           features: [
             'Tudo do Plano Bronze',
-            'Análises avançadas',
-            'Automação de tarefas',
+            'Consulta por Município',
+            'Análise Processual detalhada',
             'Suporte prioritário',
-            'Integrações premium',
           ]
         ),
       PurchasableProduct(
@@ -133,48 +130,90 @@ class InAppPurchaseService {
         ),
         features: [
           'Tudo do Plano Prata',
+          'Gestão de Consultoria',
           'Consultoria personalizada',
           'Acesso antecipado a novos recursos',
           'Suporte 24/7',
-          'Integrações exclusivas',
         ]
       ),
     ];
   }
 
   Future<Subscription?> getActiveSubscription() async {
-   Logger.log('getActiveSubscription called');
-    // TODO: Implement logic to retrieve active subscription
-    return null;
+    Logger.log('getActiveSubscription called');
+    try {
+      final currentSub = await StripeService().getCurrentSubscription();
+      if (currentSub == null) return null;
+      return Subscription(
+        id: currentSub['id'] ?? '',
+        subsId: currentSub['items']?['data']?[0]?['id'] ?? '',
+        amount: currentSub['items']?['data']?[0]?['price']?['unit_amount_decimal']?.toString(),
+      );
+    } catch (e) {
+      Logger.log('Error getting active subscription: $e', level: LoggerLevel.error, error: e);
+      return null;
+    }
   }
 
-  Future<List<dynamic>> getEnabledFeatures() async {
-   Logger.log('getEnabledFeatures called');
-    // TODO: Implement logic to retrieve enabled features
-    return [];
+  Future<List<String>> getEnabledFeatures() async {
+    Logger.log('getEnabledFeatures called');
+    try {
+      return await StripeService().getEnabledFeatures();
+    } catch (e) {
+      Logger.log('Error getting enabled features: $e', level: LoggerLevel.error, error: e);
+      return [];
+    }
   }
 
   Future<List<PlanStripe>> getListSubscription() async {
-   Logger.log('getListSubscription called');
-    // TODO: Implement logic to retrieve list of subscriptions
-    return [];
+    Logger.log('getListSubscription called');
+    try {
+      final subs = await StripeService().getActiveSubscriptions();
+      return subs.map((sub) => PlanStripe(
+        id: sub['id'] ?? '',
+        product: sub['items']?['data']?[0]?['price']?['product'] ?? '',
+      )).toList();
+    } catch (e) {
+      Logger.log('Error getting subscriptions list: $e', level: LoggerLevel.error, error: e);
+      return [];
+    }
   }
 
   Future<List<PriceStripe>> getPriceProducts({required String idProduct}) async {
-   Logger.log('getPriceProducts called');
-    // TODO: Implement logic to retrieve product prices
-    return [];
+    Logger.log('getPriceProducts called for product: $idProduct');
+    try {
+      final prices = await StripeService().getPrices(idProduct);
+      return prices.map((price) => PriceStripe.fromJson(price)).toList();
+    } catch (e) {
+      Logger.log('Error getting product prices: $e', level: LoggerLevel.error, error: e);
+      return [];
+    }
   }
 
   Future<List<Subscription>> getIdsSubscription() async {
-   Logger.log('getIdsSubscription called');
-    // TODO: Implement logic to retrieve subscription IDs
-    return [];
+    Logger.log('getIdsSubscription called');
+    try {
+      final subs = await StripeService().getActiveSubscriptions();
+      return subs.map((sub) => Subscription(
+        id: sub['id'] ?? '',
+        subsId: sub['items']?['data']?[0]?['id'] ?? '',
+        amount: sub['items']?['data']?[0]?['price']?['unit_amount_decimal']?.toString(),
+      )).toList();
+    } catch (e) {
+      Logger.log('Error getting subscription IDs: $e', level: LoggerLevel.error, error: e);
+      return [];
+    }
   }
 
   Future<void> cancelSubscription({required String subscriptionId}) async {
-   Logger.log('cancelSubscription called for ID: $subscriptionId');
-    // TODO: Implement logic to cancel subscription
+    Logger.log('cancelSubscription called for ID: $subscriptionId');
+    try {
+      await StripeService().cancelSubscription(subscriptionId);
+      Logger.log('Subscription $subscriptionId cancelled successfully');
+    } catch (e) {
+      Logger.log('Error cancelling subscription: $e', level: LoggerLevel.error, error: e);
+      rethrow;
+    }
   }
 
   Pay get _paymentClient => Pay({

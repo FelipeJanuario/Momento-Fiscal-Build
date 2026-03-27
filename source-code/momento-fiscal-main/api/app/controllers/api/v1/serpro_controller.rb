@@ -7,15 +7,17 @@ module Api
       # GET /api/v1/serpro/consulta_cpf/:cpf
       def consulta_cpf
         cpf = params[:cpf]
-        url = "https://gateway.apiserpro.serpro.gov.br/consulta-divida-ativa-df/api/v1/devedor/#{cpf}"
 
-        response = make_request(url)
+        dividas = SerproDividaAtivaService.fetch_dividas(cpf)
 
-        if response.is_a?(Net::HTTPSuccess)
-          render json: JSON.parse(response.body), status: :ok
+        if dividas.any?
+          render json: dividas, status: :ok
         else
-          render json: { error: response.body }, status: response.code.to_i
+          render json: { error: "Nenhuma dívida encontrada" }, status: :not_found
         end
+      rescue StandardError => e
+        Rails.logger.error("[SerproController] Erro consulta_cpf: #{e.message}")
+        render json: { error: "Erro ao consultar CPF" }, status: :internal_server_error
       end
 
       # GET /api/v1/serpro/dividas/:cpf_cnpj
@@ -38,18 +40,6 @@ module Api
       rescue StandardError => e
         Rails.logger.error("[SerproController] Erro: #{e.message}")
         render json: { error: "Erro ao consultar dívidas" }, status: :internal_server_error
-      end
-
-      private
-
-      def make_request(url)
-        uri = URI(url)
-        request = Net::HTTP::Get.new(uri)
-        request["Authorization"] = "Bearer #{SerproAuthService.fetch_access_token}"
-
-        Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
-          http.request(request)
-        end
       end
     end
   end

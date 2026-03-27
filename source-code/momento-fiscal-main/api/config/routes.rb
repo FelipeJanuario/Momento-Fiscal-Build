@@ -76,11 +76,32 @@ Rails.application.routes.draw do
         delete "subscriptions/:id" => "stripe#cancel_subscription"
         get "products" => "stripe#list_products"
         get "products/:product_id/prices" => "stripe#list_prices"
+        post "checkout_session" => "stripe#create_checkout_session"
       end
 
       scope :google do
         get "available_subscriptions" => "google/subscriptions#available_subscriptions"
         post "acknowledge_subscription" => "google/subscriptions#acknowledge_subscription"
+      end
+
+      # Portal da Transparência (sanções: CEIS, CNEP, CEPIM, CEAF)
+      scope :transparencia do
+        get "sancoes/:cpf_cnpj" => "transparencia#sancoes"
+      end
+
+      # APIs Fiscais (CAUC, SICONFI, SIAFI, FNDE)
+      scope :fiscais do
+        get "cauc/:cnpj" => "fiscais#cauc"
+        get "siconfi/:codigo_ibge" => "fiscais#siconfi"
+        get "transferencias/:cnpj" => "fiscais#transferencias"
+        get "fnde/:cnpj" => "fiscais#fnde"
+        get "completo/:cnpj" => "fiscais#completo"
+      end
+
+      # Consulta por Município
+      scope :municipios do
+        get "buscar" => "municipios#buscar"
+        get ":codigo_ibge/completo" => "municipios#completo"
       end
     end
 
@@ -88,4 +109,7 @@ Rails.application.routes.draw do
       get "up" => "health#show", as: :rails_health_check
     end
   end
+
+  # Stripe webhook — outside authenticated namespace (no JWT required)
+  post "stripe/webhook", to: "api/v1/stripe#webhook"
 end

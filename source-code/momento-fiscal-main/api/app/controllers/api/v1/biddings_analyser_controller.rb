@@ -205,28 +205,14 @@ module Api
         end
       end
 
-      # Consulta SERPRO Dívida Ativa
+      # Consulta SERPRO Dívida Ativa (centralizado via service)
       def render_serpro_debts(cpf_cnpj)
-        cpf = cpf_cnpj.gsub(/\D/, "") # Remove formatação
-        url = "https://gateway.apiserpro.serpro.gov.br/consulta-divida-ativa-df/api/v1/devedor/#{cpf}"
-        token = SerproAuthService.fetch_access_token
+        dividas = SerproDividaAtivaService.fetch_dividas(cpf_cnpj)
 
-        uri = URI(url)
-        request = Net::HTTP::Get.new(uri)
-        request["Authorization"] = "Bearer #{token}"
-
-        response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
-          http.request(request)
-        end
-
-        case response
-        when Net::HTTPSuccess
-          render json: { source: "serpro", data: JSON.parse(response.body) }, status: :ok
-        when Net::HTTPNotFound
-          render json: { source: "serpro", data: [], message: "Nenhuma dívida ativa encontrada" }, status: :ok
+        if dividas.any?
+          render json: { source: "serpro", data: dividas }, status: :ok
         else
-          Rails.logger.error("[SERPRO] Erro ao consultar: #{response.code} - #{response.body}")
-          render json: { error: "Serviço temporariamente indisponível" }, status: :service_unavailable
+          render json: { source: "serpro", data: [], message: "Nenhuma dívida ativa encontrada" }, status: :ok
         end
       rescue StandardError => e
         Rails.logger.error("[SERPRO] Exceção: #{e.message}")

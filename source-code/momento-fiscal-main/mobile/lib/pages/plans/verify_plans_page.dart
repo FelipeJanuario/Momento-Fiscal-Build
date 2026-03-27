@@ -19,7 +19,8 @@ class VerifyPlansPage extends StatefulWidget {
 }
 
 class _VerifyPlansPageState extends State<VerifyPlansPage> {
-  final PageController controller = PageController();
+  PageController controller = PageController();
+  double _lastViewportFraction = 1.0;
   List<PurchasableProduct> products = [];
   List<PlanStripe> plans = [];
   List<Subscription> subscriptions = [];
@@ -44,90 +45,97 @@ class _VerifyPlansPageState extends State<VerifyPlansPage> {
   void initState() {
     super.initState();
     loadPlansProducts();
+    _attachGradientListener();
+  }
 
-    controller.addListener(() {
-      int currentPage = controller.page!.round();
-      if (currentPage < products.length) {
-        if (products[currentPage].id.toLowerCase() == "bronze") {
-          setState(() {
-            backgroundGradient = const SweepGradient(
-              colors: [
-                Color.fromARGB(255, 165, 104, 55), // Bronze avermelhado
-                Color.fromARGB(255, 241, 184, 146), // Dourado avermelhado
-                Color.fromARGB(255, 140, 85, 40), // Bronze profundo avermelhado
-                Color.fromARGB(255, 241, 184, 146), // Dourado avermelhado
-                Color.fromARGB(255, 165, 104, 55), // Bronze avermelhado
-                Color.fromARGB(255, 241, 184, 146), // Dourado avermelhado
-                Color.fromARGB(255, 165, 104, 55), // Bronze avermelhado
-              ],
-              center: Alignment.center,
-              startAngle: 0.0,
-              endAngle: 5.12,
-            );
-          });
-        } else if (products[currentPage].id.toLowerCase() == "prata") {
-          setState(() {
-            backgroundGradient = const SweepGradient(
-              colors: [
-                Color(0xFFC8C8C8),
-                Color(0xFF5E5E5E),
-                Color(0xF9FFFFFF),
-                Color(0xFF575757),
-                Color(0xF9FFFFFF),
-                Color(0xFF575757),
-                Color(0xF9FFFFFF),
-                Color(0xFF575757),
-                Color(0xFFC8C8C8),
-              ],
-              center: Alignment.center,
-              startAngle: 0.0,
-              endAngle: 5.12,
-            );
-          });
-        } else if (products[currentPage].id.toLowerCase() == "ouro") {
-          setState(() {
-            backgroundGradient = const SweepGradient(
-              colors: [
-                Color(0xFFB98F02),
-                Color(0xFFFAEEB8),
-                Color(0xFFE3BC11),
-                Color(0xFFB38900),
-                Color(0xFFFAEEB8),
-                Color(0xFFB98F02),
-              ],
-              center: Alignment.center,
-              startAngle: 0.0,
-              endAngle: 5.12,
-            );
-          });
-        } else {
-          setState(() {
-            backgroundGradient = const SweepGradient(
-              colors: [
-                Color(0xFF1A48DD),
-                Color(0xB3B30EFF),
-                Color(0xFF056ABD),
-                Color(0xFF023A5F),
-                Color(0xB3A12EE4),
-                Color(0xFF1A48DD),
-              ],
-              center: Alignment.center,
-              startAngle: 0.0,
-              endAngle: 5.12,
-            );
-          });
-        }
+  void _attachGradientListener() {
+    controller.addListener(_onPageChanged);
+  }
+
+  void _onPageChanged() {
+    if (!controller.hasClients) return;
+    int currentPage = controller.page!.round();
+    if (currentPage < products.length) {
+      if (products[currentPage].id.toLowerCase() == "bronze") {
+        setState(() {
+          backgroundGradient = const SweepGradient(
+            colors: [
+              Color.fromARGB(255, 165, 104, 55),
+              Color.fromARGB(255, 241, 184, 146),
+              Color.fromARGB(255, 140, 85, 40),
+              Color.fromARGB(255, 241, 184, 146),
+              Color.fromARGB(255, 165, 104, 55),
+              Color.fromARGB(255, 241, 184, 146),
+              Color.fromARGB(255, 165, 104, 55),
+            ],
+            center: Alignment.center,
+            startAngle: 0.0,
+            endAngle: 5.12,
+          );
+        });
+      } else if (products[currentPage].id.toLowerCase() == "prata") {
+        setState(() {
+          backgroundGradient = const SweepGradient(
+            colors: [
+              Color(0xFFC8C8C8),
+              Color(0xFF5E5E5E),
+              Color(0xF9FFFFFF),
+              Color(0xFF575757),
+              Color(0xF9FFFFFF),
+              Color(0xFF575757),
+              Color(0xF9FFFFFF),
+              Color(0xFF575757),
+              Color(0xFFC8C8C8),
+            ],
+            center: Alignment.center,
+            startAngle: 0.0,
+            endAngle: 5.12,
+          );
+        });
+      } else if (products[currentPage].id.toLowerCase() == "ouro") {
+        setState(() {
+          backgroundGradient = const SweepGradient(
+            colors: [
+              Color(0xFFB98F02),
+              Color(0xFFFAEEB8),
+              Color(0xFFE3BC11),
+              Color(0xFFB38900),
+              Color(0xFFFAEEB8),
+              Color(0xFFB98F02),
+            ],
+            center: Alignment.center,
+            startAngle: 0.0,
+            endAngle: 5.12,
+          );
+        });
+      } else {
+        setState(() {
+          backgroundGradient = const SweepGradient(
+            colors: [
+              Color(0xFF1A48DD),
+              Color(0xB3B30EFF),
+              Color(0xFF056ABD),
+              Color(0xFF023A5F),
+              Color(0xB3A12EE4),
+              Color(0xFF1A48DD),
+            ],
+            center: Alignment.center,
+            startAngle: 0.0,
+            endAngle: 5.12,
+          );
+        });
       }
-    });
+    }
   }
 
   @override
   void dispose() {
-    super.dispose();
+    controller.removeListener(_onPageChanged);
+    controller.dispose();
     products = [];
     plans = [];
     subscriptions = [];
-    controller.dispose();
+    super.dispose();
   }
 
   Future<void> loadPlansProducts() async {
@@ -198,66 +206,102 @@ class _VerifyPlansPageState extends State<VerifyPlansPage> {
         decoration: BoxDecoration(
           gradient: backgroundGradient,
         ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: SizedBox(
-                height: 50,
-                child: Image.asset(
-                  'assets/images/momentofiscalbrancov2.png',
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            Expanded(
-              child: isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                      ),
-                    )
-                  : SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.7,
-                      child: PageView.builder(
-                        controller: controller,
-                        itemCount: products.length,
-                        itemBuilder: (context, index) {
-                          final product = products[index];
-                          final Color buttonColor = getButtonColor(product.id);
-                          final Widget buttonWidget = getButtonWidget(product);
-                          final bool isPlanButton =
-                              getButtonisValid(product.id);
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Responsivo: ajusta viewportFraction conforme largura
+            final screenWidth = constraints.maxWidth;
+            final double viewportFraction;
+            final double horizontalPadding;
 
-                          return Padding(
-                            padding: const EdgeInsets.all(25),
-                            child: SimplePlanCard(
-                              product: product,
-                              buttonColor: buttonColor,
-                              buttonWidget: buttonWidget,
-                              isEnabled: isPlanButton,
-                            ),
-                          );
-                        },
-                      ),
+            if (screenWidth > 1200) {
+              viewportFraction = 0.30;
+              horizontalPadding = 16;
+            } else if (screenWidth > 800) {
+              viewportFraction = 0.45;
+              horizontalPadding = 16;
+            } else if (screenWidth > 600) {
+              viewportFraction = 0.65;
+              horizontalPadding = 20;
+            } else {
+              viewportFraction = 0.85;
+              horizontalPadding = 25;
+            }
+
+            // Recria controller se viewportFraction mudou
+            if (viewportFraction != _lastViewportFraction) {
+              _lastViewportFraction = viewportFraction;
+              final currentPage = controller.hasClients ? controller.page?.round() ?? 0 : 0;
+              controller.removeListener(_onPageChanged);
+              controller.dispose();
+              controller = PageController(
+                viewportFraction: viewportFraction,
+                initialPage: currentPage,
+              );
+              controller.addListener(_onPageChanged);
+            }
+
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: SizedBox(
+                    height: 50,
+                    child: Image.asset(
+                      'assets/images/momentofiscalbrancov2.png',
+                      fit: BoxFit.cover,
                     ),
-            ),
-            if (!isLoading && products.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: SmoothPageIndicator(
-                  controller: controller,
-                  count: products.length,
-                  effect: const WormEffect(
-                    dotHeight: 16,
-                    dotWidth: 16,
-                    type: WormType.thinUnderground,
-                    dotColor: Colors.white,
-                    activeDotColor: colorSecundary,
                   ),
                 ),
-              ),
-          ],
+                Expanded(
+                  child: isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                          ),
+                        )
+                      : PageView.builder(
+                          controller: controller,
+                          itemCount: products.length,
+                          itemBuilder: (context, index) {
+                            final product = products[index];
+                            final Color buttonColor = getButtonColor(product.id);
+                            final Widget buttonWidget = getButtonWidget(product);
+                            final bool isPlanButton =
+                                getButtonisValid(product.id);
+
+                            return Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: horizontalPadding,
+                                vertical: 16,
+                              ),
+                              child: SimplePlanCard(
+                                product: product,
+                                buttonColor: buttonColor,
+                                buttonWidget: buttonWidget,
+                                isEnabled: isPlanButton,
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                if (!isLoading && products.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: SmoothPageIndicator(
+                      controller: controller,
+                      count: products.length,
+                      effect: const WormEffect(
+                        dotHeight: 16,
+                        dotWidth: 16,
+                        type: WormType.thinUnderground,
+                        dotColor: Colors.white,
+                        activeDotColor: colorSecundary,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );

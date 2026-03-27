@@ -2,8 +2,14 @@
 
 # SerproDividaAtivaService
 # Serviço para consultar dívidas ativas na API do Serpro e atualizar o cache no estabelecimento
+# Suporta endpoint nacional (todos os estados) com fallback para DF
 class SerproDividaAtivaService
-  DIVIDA_ATIVA_URL = "https://gateway.apiserpro.serpro.gov.br/consulta-divida-ativa-df/api/v1/devedor"
+  # Endpoint nacional (padrão) - cobre todos os estados do Brasil
+  DIVIDA_ATIVA_URL = ENV.fetch("SERPRO_DIVIDA_ATIVA_URL",
+    "https://gateway.apiserpro.serpro.gov.br/consulta-divida-ativa/api/v1/devedor")
+
+  # Endpoint DF (fallback) - apenas Distrito Federal
+  DIVIDA_ATIVA_DF_URL = "https://gateway.apiserpro.serpro.gov.br/consulta-divida-ativa-df/api/v1/devedor"
 
   # Consulta dívidas com cache inteligente
   # 1. Verifica se tem cache válido no banco (< 3 meses)
@@ -64,11 +70,30 @@ class SerproDividaAtivaService
   end
 
   # Apenas consulta dívidas sem atualizar banco
+  # Tenta endpoint nacional primeiro; se falhar (403/401), usa DF como fallback
   # @param cnpj [String] CNPJ ou CPF
   # @return [Array] Lista de dívidas
   def self.fetch_dividas(cnpj)
     cnpj_limpo = cnpj.gsub(/\D/, "")
-    url = "#{DIVIDA_ATIVA_URL}/#{cnpj_limpo}"
+
+    # Tenta endpoint nacional (todos os estados)
+    resultado = fetch_from_endpoint(DIVIDA_ATIVA_URL, cnpj_limpo)
+    return resultado if resultado
+
+    # Fallback: endpoint DF (caso não tenha acesso ao nacional)
+    if DIVIDA_ATIVA_URL != DIVIDA_ATIVA_DF_URL
+      Rails.logger.warn("[SerproDividaAtiva] Nacional indisponível, tentando endpoint DF...")
+      resultado = fetch_from_endpoint(DIVIDA_ATIVA_DF_URL, cnpj_limpo)
+      return resultado if resultado
+    end
+
+    []
+  end
+
+  # Consulta um endpoint específico do SERPRO
+  # @return [Array, nil] Lista de dívidas ou nil se falhou
+  def self.fetch_from_endpoint(base_url, cnpj_limpo)
+    url = "#{base_url}/#{cnpj_limpo}"
     token = SerproAuthService.fetch_access_token
 
     uri = URI(url)
@@ -84,13 +109,16 @@ class SerproDividaAtivaService
       JSON.parse(response.body)
     when Net::HTTPNotFound
       []
+    when Net::HTTPForbidden, Net::HTTPUnauthorized
+      Rails.logger.warn("[SerproDividaAtiva] Acesso negado (#{response.code}) em #{base_url}")
+      nil
     else
       Rails.logger.error("[SerproDividaAtiva] Erro #{response.code}: #{response.body}")
-      []
+      nil
     end
   rescue StandardError => e
-    Rails.logger.error("[SerproDividaAtiva] Exceção: #{e.message}")
-    []
+    Rails.logger.error("[SerproDividaAtiva] Exceção em #{base_url}: #{e.message}")
+    nil
   end
 
   private

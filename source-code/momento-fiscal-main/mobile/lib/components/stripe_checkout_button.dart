@@ -1,10 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:momentofiscal/core/models/purchasable_product.dart';
 import 'package:momentofiscal/core/services/billing/stripe_service.dart';
+import 'package:momentofiscal/core/services/freePlanUsage/free_plans_usages_rails_servide.dart';
 import 'package:momentofiscal/core/utilities/logger.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
 import 'package:momentofiscal/pages/dashboard/dashboad_page.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Stripe checkout button for web-based subscriptions
 /// Replaces complex app store purchase logic
@@ -26,9 +30,63 @@ class StripeCheckoutButton extends StatefulWidget {
   State<StripeCheckoutButton> createState() => _StripeCheckoutButtonState();
 }
 
-class _StripeCheckoutButtonState extends State<StripeCheckoutButton> {
+class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
+    with WidgetsBindingObserver {
   bool _isLoading = false;
+  bool _checkoutPending = false;
   final _storage = const FlutterSecureStorage();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _checkoutPending) {
+      _checkoutPending = false;
+      _verifySubscriptionAfterCheckout();
+    }
+  }
+
+  Future<void> _verifySubscriptionAfterCheckout() async {
+    if (!mounted) return;
+
+    setState(() { _isLoading = true; });
+
+    try {
+      // Aguardar um pouco para o Stripe processar
+      await Future.delayed(const Duration(seconds: 2));
+
+      final currentSub = await StripeService().getCurrentSubscription();
+      if (currentSub != null && mounted) {
+        // Assinatura ativa encontrada — gravar no storage
+        final productName = currentSub['items']?['data']?[0]?['price']?['product'] ?? '';
+        await _storage.write(key: 'subscriptionPlatform', value: 'stripe');
+        await _storage.write(key: 'planLevel', value: productName);
+        _showSuccessDialog();
+        return;
+      }
+
+      // Sem assinatura ainda — pode estar processando
+      if (mounted) {
+        _showPendingDialog();
+      }
+    } catch (e) {
+      Logger.log('Error verifying subscription: $e', level: LoggerLevel.error, error: e);
+    } finally {
+      if (mounted) {
+        setState(() { _isLoading = false; });
+      }
+    }
+  }
 
   Future<void> _handleCheckout() async {
     if (!widget.isEnabled || _isLoading) return;
@@ -51,20 +109,27 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton> {
         return;
       }
 
-      // Create Stripe checkout session
-      await StripeService().createCheckoutSession(
+      // Create Stripe checkout session and open hosted page
+      final checkoutUrl = await StripeService().createCheckoutSession(
         priceId: widget.product.id,
         customerEmail: userEmail,
       );
 
-      // TODO: Integrate Stripe Payment Element here
-      // For now, show success message
-      if (mounted) {
-        _showSuccessDialog();
+      // Marcar checkout pendente para verificar ao retornar
+      _checkoutPending = true;
+
+      // Open Stripe hosted checkout page in browser
+      final uri = Uri.parse(checkoutUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        _checkoutPending = false;
+        throw Exception('Não foi possível abrir a página de pagamento');
       }
 
     } catch (e) {
       Logger.log('Error during checkout: $e', level: LoggerLevel.error, error: e);
+      _checkoutPending = false;
       if (mounted) {
         _showErrorDialog(e.toString());
       }
@@ -78,17 +143,75 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton> {
   }
 
   Future<void> _handleFreePlan() async {
-    // Free plan logic here
-    Logger.log('Activating free plan');
-    await _storage.write(key: 'subscription', value: 'free');
-    if (mounted) {
-      _showSuccessDialog();
+    try {
+      String? userId = await _storage.read(key: 'id');
+
+      if (userId == null || userId.isEmpty) {
+        throw Exception('Usuário não identificado');
+      }
+
+      // Verificar se já usou plano free
+      final responseStatus = await FreePlansUsagesRailsService()
+          .getFreePlansUsages(userId: userId)
+          .timeout(const Duration(seconds: 15));
+
+      if (responseStatus != null) {
+        final decoded = json.decode(responseStatus);
+        final freePlanUsages = decoded['free_plan_usages'] as List? ?? [];
+        final expiredIds = decoded['expired_plan_ids'] as List? ?? [];
+
+        // Plano free já expirado
+        if (expiredIds.isNotEmpty) {
+          if (mounted) {
+            _showFreePlanExpiredDialog();
+          }
+          return;
+        }
+
+        // Já possui plano free ativo
+        if (freePlanUsages.isNotEmpty && freePlanUsages[0]['status'] == 'active') {
+          // Já está usando free — gravar no storage e ir ao dashboard
+          await _storage.write(key: 'subscriptionPlatform', value: 'free');
+          await _storage.write(key: 'statusFree', value: 'active');
+          await _storage.write(key: 'planLevel', value: 'free');
+          if (mounted) _showFreePlanAlreadyActiveDialog();
+          return;
+        }
+      }
+
+      // Registrar plano free no backend
+      final responseFree = await FreePlansUsagesRailsService()
+          .createFreePlanUsage(userId: userId)
+          .timeout(const Duration(seconds: 15));
+
+      final responseBody = json.decode(responseFree.body);
+      final message = responseBody['message'] ?? '';
+
+      if (message == 'Plano gratuito já utilizado') {
+        if (mounted) _showFreePlanAlreadyUsedDialog();
+        return;
+      }
+
+      // Sucesso — gravar no storage
+      await _storage.write(key: 'subscriptionPlatform', value: 'free');
+      await _storage.write(key: 'statusFree', value: 'active');
+      await _storage.write(key: 'planLevel', value: 'free');
+
+      if (mounted) {
+        _showSuccessDialog();
+      }
+    } catch (e) {
+      Logger.log('Error activating free plan: $e', level: LoggerLevel.error, error: e);
+      if (mounted) {
+        _showErrorDialog('Erro ao ativar o plano gratuito. Tente novamente.');
+      }
     }
   }
 
   void _showSuccessDialog() {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
@@ -108,14 +231,119 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
-                // Navigate to dashboard
-                Navigator.pushReplacement(
-                  context,
+                Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const DashboadPage()),
+                  (Route<dynamic> route) => false,
                 );
               },
               child: const Text('OK', style: TextStyle(color: colorSecundary)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showPendingDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.hourglass_top, color: Colors.orange, size: 32),
+              SizedBox(width: 12),
+              Expanded(child: Text('Processando pagamento')),
+            ],
+          ),
+          content: const Text(
+            'Seu pagamento está sendo processado. Caso já tenha concluído, aguarde alguns instantes e volte à tela de planos para verificar.',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK', style: TextStyle(color: colorSecundary)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showFreePlanExpiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text('Plano Expirado'),
+          content: const Text(
+            'Seu plano gratuito já expirou. É necessário assinar um plano pago para continuar.',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Entendi', style: TextStyle(color: colorSecundary)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showFreePlanAlreadyActiveDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text('Plano Free Ativo'),
+          content: const Text(
+            'Você já possui o Plano Free ativo com duração de 7 dias.',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const DashboadPage()),
+                  (Route<dynamic> route) => false,
+                );
+              },
+              child: const Text('Ir ao Dashboard', style: TextStyle(color: colorSecundary)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showFreePlanAlreadyUsedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text('Plano Free já utilizado'),
+          content: const Text(
+            'Você já utilizou o período gratuito de 7 dias. Selecione um plano pago para continuar.',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Entendi', style: TextStyle(color: colorSecundary)),
             ),
           ],
         );
@@ -138,9 +366,9 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton> {
               Text('Erro'),
             ],
           ),
-          content: Text(
+          content: const Text(
             'Não foi possível processar a assinatura. Tente novamente.',
-            style: const TextStyle(fontSize: 16),
+            style: TextStyle(fontSize: 16),
           ),
           actions: [
             TextButton(

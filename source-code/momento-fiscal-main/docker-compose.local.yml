@@ -82,6 +82,18 @@ services:
       BIDDINGS_ANALYSER_URL: ${BIDDINGS_ANALYSER_URL:-http://localhost}
       BIDDINGS_ANALYSER_API_KEY: ${BIDDINGS_ANALYSER_API_KEY:-test_key}
       
+      # SERPRO Dívida Ativa (Nacional)
+      SERPRO_DIVIDA_ATIVA_URL: ${SERPRO_DIVIDA_ATIVA_URL:-https://gateway.apiserpro.serpro.gov.br/consulta-divida-ativa/api}
+      
+      # Portal da Transparência
+      PORTAL_TRANSPARENCIA_API_KEY: ${PORTAL_TRANSPARENCIA_API_KEY:-}
+      
+      # PGFN Regularize
+      PGFN_REGULARIZE_URL: ${PGFN_REGULARIZE_URL:-https://api-regularize.pgfn.gov.br}
+      
+      # CAUC (Transferegov)
+      CAUC_API_URL: ${CAUC_API_URL:-https://api.transferegov.br}
+      
       # Datajud API (CNJ)
       DATAJUD_API_KEY: ${DATAJUD_API_KEY:-cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==}
       

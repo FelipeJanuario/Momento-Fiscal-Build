@@ -5,8 +5,8 @@ module Api
     # rubocop:disable Metrics/ClassLength
     # Controller to handle Stripe integration
     class StripeController < ApplicationController
-      before_action :authenticate_user!
-      before_action :create_stripe_customer
+      before_action :authenticate_user!, except: [:webhook]
+      before_action :create_stripe_customer, except: [:webhook]
 
       def create_setup_intent
         setup_intent = Stripe::SetupIntent.create(customer: current_user.stripe_customer_id)
@@ -140,7 +140,89 @@ module Api
         render json: { error: e.message }, status: :unprocessable_entity
       end
 
+      # rubocop:disable Metrics/MethodLength
+      def create_checkout_session
+        base_url = ENV.fetch("APP_BASE_URL", "https://momentofiscal.com.br")
+
+        session = Stripe::Checkout::Session.create(
+          customer:             current_user.stripe_customer_id,
+          mode:                 "subscription",
+          line_items:           [{ price: params[:price_id], quantity: 1 }],
+          success_url:          "#{base_url}/payment/success?session_id={CHECKOUT_SESSION_ID}",
+          cancel_url:           "#{base_url}/payment/cancel",
+          locale:               "pt-BR",
+          allow_promotion_codes: true
+        )
+
+        render json: { checkout_url: session.url }
+      rescue Stripe::InvalidRequestError => e
+        render json: { error: e.message }, status: :unprocessable_entity
+      end
+
+      def webhook
+        payload = request.body.read
+        sig_header = request.env["HTTP_STRIPE_SIGNATURE"]
+        endpoint_secret = ENV.fetch("STRIPE_WEBHOOK_SECRET", "")
+
+        begin
+          event = Stripe::Webhook.construct_event(payload, sig_header, endpoint_secret)
+        rescue JSON::ParserError
+          return head :bad_request
+        rescue Stripe::SignatureVerificationError
+          return head :bad_request
+        end
+
+        handle_webhook_event(event)
+        head :ok
+      end
+      # rubocop:enable Metrics/MethodLength
+
       private
+
+      def handle_webhook_event(event)
+        case event.type
+        when "checkout.session.completed"
+          handle_checkout_completed(event.data.object)
+        when "customer.subscription.updated"
+          handle_subscription_updated(event.data.object)
+        when "customer.subscription.deleted"
+          handle_subscription_deleted(event.data.object)
+        when "invoice.payment_failed"
+          handle_payment_failed(event.data.object)
+        end
+      end
+
+      def handle_checkout_completed(session)
+        user = User.find_by(stripe_customer_id: session.customer)
+        return unless user
+
+        user.update(subscription_status: "active")
+        Rails.logger.info("[Stripe Webhook] Checkout completed for user #{user.id}")
+      end
+
+      def handle_subscription_updated(subscription)
+        user = User.find_by(stripe_customer_id: subscription.customer)
+        return unless user
+
+        user.update(subscription_status: subscription.status)
+        Rails.logger.info("[Stripe Webhook] Subscription #{subscription.id} updated to #{subscription.status}")
+      end
+
+      def handle_subscription_deleted(subscription)
+        user = User.find_by(stripe_customer_id: subscription.customer)
+        return unless user
+
+        user.update(subscription_status: "canceled")
+        Rails.logger.info("[Stripe Webhook] Subscription #{subscription.id} canceled for user #{user.id}")
+      end
+
+      def handle_payment_failed(invoice)
+        user = User.find_by(stripe_customer_id: invoice.customer)
+        return unless user
+
+        user.update(subscription_status: "past_due")
+        Rails.logger.info("[Stripe Webhook] Payment failed for user #{user.id}, invoice #{invoice.id}")
+      end
 
       def create_stripe_customer
         current_user.create_stripe_customer if current_user.stripe_customer_id.blank?

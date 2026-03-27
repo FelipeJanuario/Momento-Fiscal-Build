@@ -57,25 +57,35 @@ class JusbrasilService
   ].freeze
 
   # Busca processos por CPF/CNPJ
-  # Tenta PJE primeiro (mais completo), depois Datajud como fallback
+  # Busca processos por CPF/CNPJ via PJe (requer certificado digital configurado)
+  # Nota: Datajud API pública não expõe dados de partes (LGPD), busca apenas via PJe.
   def self.fetch_processes(cpf_cnpj, options = {})
-    # Tenta consultar via PJE (retorna dados das partes)
     pje_result = PjeProcessosService.fetch_processes_by_cpf(cpf_cnpj, options)
-    
+
     if pje_result[:status] == :success && pje_result[:total].positive?
       Rails.logger.info { "[JusbrasilService] Encontrados #{pje_result[:total]} processos via PJE" }
       return { source: "pje", **pje_result }
     end
-    
-    # Fallback: Datajud não suporta busca por CPF (apenas por número de processo)
-    Rails.logger.warn { "[JusbrasilService] PJE falhou, Datajud não suporta busca por CPF/CNPJ" }
-    {
-      source: "none",
-      status: :not_found,
-      message: "API de consulta por CPF indisponível. Use número do processo.",
-      total: 0,
-      processos: []
-    }
+
+    if pje_result[:status] == :success
+      Rails.logger.info { "[JusbrasilService] PJe retornou 0 processos para #{cpf_cnpj}" }
+      return { source: "pje", status: :not_found, message: "Nenhum processo encontrado para este CPF/CNPJ.", total: 0, processos: [] }
+    end
+
+    # PJe falhou — verificar se está configurado
+    unless ENV.fetch("PJE_AUTH_PFX", "").present?
+      Rails.logger.warn { "[JusbrasilService] PJE_AUTH_PFX não configurado. Busca por CPF/CNPJ indisponível." }
+      return {
+        source: "none",
+        status: :service_unavailable,
+        message: "Serviço de busca por CPF/CNPJ requer certificado digital PJe (não configurado neste ambiente).",
+        total: 0,
+        processos: []
+      }
+    end
+
+    Rails.logger.warn { "[JusbrasilService] PJe configurado mas falhou: #{pje_result[:message]}" }
+    { source: "pje", status: :error, message: pje_result[:message] || "Erro ao consultar PJe.", total: 0, processos: [] }
   end
 
   # Busca processos por número em TODOS os tribunais Datajud (paralelo)
