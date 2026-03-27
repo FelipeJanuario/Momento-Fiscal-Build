@@ -57,9 +57,17 @@ class ProcessJusbrasil {
         isNotResponse = true;
         searchAfter = null;
         throw Exception('Server error: ${response.statusCode}');
-      } else if(response.statusCode == 404) {
+      } else if (response.statusCode == 503) {
+        searchAfter = null;
+        final body = json.decode(response.body);
+        throw Exception(body['error'] ?? 'Serviço de busca por CPF/CNPJ indisponível neste ambiente.');
+      } else if (response.statusCode == 404) {
         searchAfter = null;
         throw Exception('not found: ${response.statusCode}');
+      } else if (response.statusCode == 422) {
+        searchAfter = null;
+        final body = json.decode(response.body);
+        throw Exception(body['error'] ?? 'Erro na autenticação PJe.');
       } else {
         searchAfter = null;
         throw Exception('Failed to load Process Jusbrasil');

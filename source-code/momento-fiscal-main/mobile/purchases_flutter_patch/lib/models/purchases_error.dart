@@ -38,7 +38,7 @@ class PurchasesError extends Equatable {
   ];
 }
 
-_purchasesErrorCodeFromJson(int json) {
+PurchasesErrorCode _purchasesErrorCodeFromJson(int json) {
   if (json >= PurchasesErrorCode.values.length) {
     return PurchasesErrorCode.unknownError;
   }

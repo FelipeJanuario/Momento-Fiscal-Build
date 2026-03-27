@@ -131,21 +131,46 @@ class _IndebtedCompaniesPageState extends State<IndebtedCompaniesPage> {
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    controller: _scrollController,
-                    itemCount: _companies.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index < _companies.length) {
-                        return CompanyCard(company: _companies[index]);
-                      } else if (isMoreLoading) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 10),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-                      return Container();
-                    },
-                  ),
+                : _companies.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                size: 64,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Nenhuma empresa devedora encontrada nesta região',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        itemCount: _companies.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index < _companies.length) {
+                            return CompanyCard(company: _companies[index]);
+                          } else if (isMoreLoading) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 10),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          return Container();
+                        },
+                      ),
           ),
         ],
       ),

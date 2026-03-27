@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:momentofiscal/core/models/company.dart';
 import 'package:momentofiscal/core/services/biddingAnalyser/location/location_compaines_rails.dart';
 import 'package:momentofiscal/core/services/geocoding/reverse_geocoding_service.dart';
+import 'package:momentofiscal/core/utilities/api_constants.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
 import 'package:momentofiscal/pages/dashboard/dashboad_page.dart';
 
@@ -35,6 +36,7 @@ class _SearchByLocationOsmPageState extends State<SearchByLocationOsmPage> {
   bool _isGeocodingInProgress = false;
   int _geocodedCount = 0;
   int _pendingGeocode = 0;
+  bool _isApproximateLocation = false; // true quando CEP falhou e usou fallback por coordenadas
   
   // Busca de dívidas SERPRO em background
   bool _isLoadingDebts = false;
@@ -100,13 +102,18 @@ class _SearchByLocationOsmPageState extends State<SearchByLocationOsmPage> {
       print('[OSM] CEP retornado: $cep');
       
       if (cep != null) {
-        setState(() => _userCep = cep);
+        setState(() {
+          _userCep = cep;
+          _isApproximateLocation = false;
+        });
         print('[OSM] CEP encontrado: $cep, buscando empresas...');
-        
-        // Busca empresas por prefixo de CEP
         await _loadCompaniesByCep(cep);
       } else {
-        _showError('Não foi possível obter o CEP da sua localização');
+        // CEP indisponível no Nominatim — usa fallback por raio de coordenadas
+        print('[OSM] CEP não encontrado. Usando fallback por coordenadas (50 km)...');
+        setState(() => _isApproximateLocation = true);
+        _showWarning('CEP não encontrado. Exibindo devedores em um raio de 50 km (localização aproximada).');
+        await _loadCompaniesByCoordinates(position.latitude, position.longitude);
       }
       
     } catch (e) {
@@ -135,8 +142,15 @@ class _SearchByLocationOsmPageState extends State<SearchByLocationOsmPage> {
       print('[OSM] ${companies.length} empresas encontradas');
       log('[SearchByLocationOsmPage] ${companies.length} empresas encontradas');
       
-      if (companies.isEmpty) {
-        _showMessage('Nenhuma empresa encontrada na região do CEP ${cep.substring(0, _cepDigits)}xxx');
+      if (companies.isEmpty && _userPosition != null) {
+        // CEP não retornou resultados — fallback para busca por coordenadas
+        // que usa expansão progressiva e ordenação por maior dívida
+        print('[OSM] Nenhum resultado por CEP. Fallback para busca por coordenadas...');
+        setState(() => _isApproximateLocation = true);
+        await _loadCompaniesByCoordinates(_userPosition!.latitude, _userPosition!.longitude);
+        return;
+      } else if (companies.isEmpty) {
+        _showMessage('Nenhuma empresa devedora encontrada na região');
       } else {
         // Conta quantas empresas precisam de geocodificação
         final semCoordenadas = companies.where((c) => c.latitude == null || c.longitude == null).length;
@@ -159,6 +173,42 @@ class _SearchByLocationOsmPageState extends State<SearchByLocationOsmPage> {
       print('[OSM] Erro ao carregar empresas: $e');
       log('[SearchByLocationOsmPage] Erro ao carregar empresas: $e');
       _showError('Erro ao carregar empresas');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  /// Fallback: carrega empresas por coordenadas GPS quando CEP não está disponível
+  Future<void> _loadCompaniesByCoordinates(double lat, double lng) async {
+    print('[OSM] _loadCompaniesByCoordinates($lat, $lng) iniciado');
+    setState(() => _isLoading = true);
+
+    try {
+      final companies = await LocationCompaniesRails().getInLocationByCoordinates(
+        lat: lat,
+        lng: lng,
+        radiusKm: 50.0,
+        page: 1,
+        pageSize: 100,
+      );
+
+      setState(() => _companies = companies);
+      print('[OSM] ${companies.length} empresas encontradas via coordenadas');
+
+      if (companies.isEmpty) {
+        _showMessage('Nenhuma empresa encontrada em um raio de 50 km');
+      } else {
+        final semCoordenadas = companies
+            .where((c) => c.latitude == null || c.longitude == null)
+            .length;
+        if (semCoordenadas > 0) {
+          _geocodeCompaniesInBackground();
+        }
+        _fetchDebtsInBackground();
+      }
+    } catch (e) {
+      print('[OSM] Erro ao carregar empresas por coordenadas: $e');
+      _showError('Erro ao carregar empresas por localização');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -244,11 +294,12 @@ class _SearchByLocationOsmPageState extends State<SearchByLocationOsmPage> {
   /// Salva coordenadas no backend
   Future<void> _saveCoordinatesToBackend(String companyId, double lat, double lng) async {
     try {
-      final url = Uri.http(
-        'localhost:3000',
-        '/api/v1/debtors/$companyId/coordinates',
-      );
-      
+      final usesHttps = ApiConstants.url.startsWith('https://');
+      final sanitized = ApiConstants.url.replaceFirst(RegExp(r'^https?://'), '');
+      final url = usesHttps
+          ? Uri.https(sanitized, '/api/v1/debtors/$companyId/coordinates')
+          : Uri.http(sanitized, '/api/v1/debtors/$companyId/coordinates');
+
       final response = await http.patch(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -357,6 +408,16 @@ class _SearchByLocationOsmPageState extends State<SearchByLocationOsmPage> {
     );
   }
 
+  void _showWarning(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.orange,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   /// Mostra detalhes de uma empresa em um bottom sheet
   /// Busca dados completos via API incluindo dívidas SERPRO
   void _showCompanyDetails(Company company) {
@@ -413,6 +474,29 @@ class _SearchByLocationOsmPageState extends State<SearchByLocationOsmPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_isApproximateLocation) ...[
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange.shade700, size: 16),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Localização aproximada (50 km)\nCEP não disponível para esta região.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             if (_userCep != null) ...[
               Text('Seu CEP: ${_userCep!.substring(0, 5)}-${_userCep!.substring(5)}'),
               const SizedBox(height: 8),

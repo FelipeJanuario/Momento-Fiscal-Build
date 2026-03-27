@@ -1,3 +1,8 @@
 .git
 /coverage
 store-file-64
+
+# Variáveis de ambiente (contêm credenciais sensíveis)
+.env
+.env.local
+.env.*.local

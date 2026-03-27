@@ -19,8 +19,11 @@ class SimplePlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = screenWidth > 600 ? 450.0 : screenWidth * 0.85;
+
     return Container(
-      width: 350,
+      width: cardWidth,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -34,7 +37,6 @@ class SimplePlanCard extends StatelessWidget {
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Plan title
@@ -60,7 +62,7 @@ class SimplePlanCard extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
           // Plan description
           Text(
@@ -72,36 +74,43 @@ class SimplePlanCard extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
-          // Features list
-          ...product.features.map((feature) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      color: buttonColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        feature,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black87,
+          // Features list (scrollable)
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: product.features.map((feature) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: buttonColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          feature,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              )),
+                    ],
+                  ),
+                )).toList(),
+              ),
+            ),
+          ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
 
-          // Price
+          // Price (always visible at bottom)
           Center(
             child: Text(
               product.price,
@@ -113,9 +122,9 @@ class SimplePlanCard extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
-          // Checkout button
+          // Checkout button (always visible at bottom)
           StripeCheckoutButton(
             product: product,
             buttonColor: buttonColor,

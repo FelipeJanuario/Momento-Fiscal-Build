@@ -46,16 +46,19 @@ class TjCard extends StatelessWidget {
             ),
             IconButton(
                 onPressed: () {
-                  if (subscriptionList.contains('debt_report') &&
-                          role != "admin" ||
-                      iosSubscription == 'free' && role != "admin" ||
-                      iosSubscription == 'bronze' && role != "admin") {
+                  // Bloqueia para planos Free e Bronze (exige Prata ou superior)
+                  if (role != "admin" &&
+                      (subscriptionList.contains('debt_report') ||
+                       iosSubscription == 'free' ||
+                       iosSubscription == 'bronze')) {
                     cardUpgradePlans(
                       context: context,
                       text:
-                          'Seu plano atual não permite acessar esta funcionalidade. Faça o upgrade para continuar.',
+                          'Esta funcionalidade requer o Plano Prata ou superior. Faça o upgrade para continuar.',
                     );
-                  } else {}
+                    return;
+                  }
+
                   if (listJusbrasil.isNotEmpty) {
                     Navigator.of(context).push(
                       MaterialPageRoute(

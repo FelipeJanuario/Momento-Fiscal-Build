@@ -28,7 +28,6 @@ void main() {
           [],
         ),
       },
-        current: null,
       );
       expect(info, equals(expected));
     });

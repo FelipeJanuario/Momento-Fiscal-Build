@@ -62,7 +62,7 @@ void main() {
         'code': 'GEM',
         'serverDescription': null,
       },
-    }
+    },
   };
 
   setUp(() {
@@ -864,7 +864,7 @@ void main() {
               'googleIsPersonalizedPrice': true,
               'signedDiscountTimestamp': '1234567890',
               'winBackOfferIdentifier': null,
-              'customerEmail': 'testemail@revenuecat.com'
+              'customerEmail': 'testemail@revenuecat.com',
             },
           ),
         ],

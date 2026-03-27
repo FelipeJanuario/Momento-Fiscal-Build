@@ -18,7 +18,7 @@ class PresentedOfferingContext extends Equatable {
     this.targetingContext,
   );
 
-  toJson() => {
+  Map<String, dynamic> toJson() => {
     'offeringIdentifier': offeringIdentifier,
     'placementIdentifier': placementIdentifier,
     'targetingContext': targetingContext?.toJson(),

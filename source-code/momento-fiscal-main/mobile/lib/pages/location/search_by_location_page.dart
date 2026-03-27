@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:momentofiscal/core/models/company.dart';
-import 'package:momentofiscal/core/models/location.dart';
 import 'package:momentofiscal/core/services/biddingAnalyser/location/location_compaines_rails.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
 import 'package:momentofiscal/pages/dashboard/dashboad_page.dart';
@@ -42,11 +41,6 @@ class _SearchByLocationPageState extends State<SearchByLocationPage> {
   bool isLoading = false;
   bool isMoreLoading = false;
   late Future<void> company;
-  double? _longStarting;
-  double? _latStarting;
-  double? _longEnding;
-  double? _latEnding;
-  String? _previousGeohash;
   LatLng? _currentCameraCenter;
   String? _selectedDebtNature;
 
@@ -384,6 +378,46 @@ class _SearchByLocationPageState extends State<SearchByLocationPage> {
     );
   }
 
+  /// Ajusta o mapa para mostrar todos os marcadores retornados.
+  /// Ativado quando a expansão progressiva traz resultados de outra região.
+  void _adjustCameraToMarkers(List<Company> companies) async {
+    if (companies.isEmpty) return;
+
+    double minLat = 90, maxLat = -90;
+    double minLng = 180, maxLng = -180;
+
+    for (final c in companies) {
+      final coords = c.address?.geographicCoordinate?.coordinates;
+      double? lat = coords != null && coords.length == 2 ? coords[1] : c.latitude;
+      double? lng = coords != null && coords.length == 2 ? coords[0] : c.longitude;
+      if (lat == null || lng == null) continue;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+    }
+
+    if (minLat > maxLat) return; // nenhuma coordenada válida
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+
+    // Verifica se os markers estão dentro do viewport atual
+    final visibleRegion = await (await _controller.future).getVisibleRegion();
+    final alreadyVisible =
+        visibleRegion.contains(LatLng(minLat, minLng)) &&
+        visibleRegion.contains(LatLng(maxLat, maxLng));
+
+    if (!alreadyVisible) {
+      final controller = await _controller.future;
+      controller.animateCamera(
+        CameraUpdate.newLatLngBounds(bounds, 64.0),
+      );
+    }
+  }
+
   void _addCentralCircle() {
     if (_currentCameraCenter == null) return;
 
@@ -422,16 +456,27 @@ class _SearchByLocationPageState extends State<SearchByLocationPage> {
           page: 1,
         );
 
+        // Filtra apenas empresas devedoras
+        final List<Company> debtorCompanies = companiesInRegion.where((c) {
+          return (c.debtsCount != null && c.debtsCount! > 0) ||
+                 (c.debtsValue != null && c.debtsValue! > 0);
+        }).toList();
+
         setState(() {
-          companies = companiesInRegion;
+          companies = debtorCompanies;
         });
 
         // Atualiza marcadores com clustering
-        await _updateMarkersFromCompanies(companiesInRegion);
+        await _updateMarkersFromCompanies(debtorCompanies);
+
+        // Se os marcadores estiverem fora do viewport atual (expansão progressiva
+        // pode trazer resultados de outra região), ajusta a câmera para mostrá-los
+        if (debtorCompanies.isNotEmpty) {
+          _adjustCameraToMarkers(debtorCompanies);
+        }
       } else {
-        // Modo antigo: usa clusters do biddings analyser
-        final List<Location> locations =
-            await LocationCompaniesRails().getCountInLocation(
+        // Modo antigo: usa clusters do biddings analyser (resultado não utilizado)
+        await LocationCompaniesRails().getCountInLocation(
           longStarting: visibleRegion.southwest.longitude,
           latStarting: visibleRegion.northeast.latitude,
           longEnding: visibleRegion.northeast.longitude,
@@ -1196,6 +1241,7 @@ class _SearchByLocationPageState extends State<SearchByLocationPage> {
 
   Future<Map<String, dynamic>> _consultarDividaSerpro(String cnpj) async {
     // Remove formatação do CNPJ
+    // ignore: unused_local_variable
     final cnpjLimpo = cnpj.replaceAll(RegExp(r'[^\d]'), '');
 
     try {

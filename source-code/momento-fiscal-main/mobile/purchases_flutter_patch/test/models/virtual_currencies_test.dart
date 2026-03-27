@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purchases_flutter/models/virtual_currencies.dart';
-import 'package:purchases_flutter/models/virtual_currency.dart';
 
 void main() {
   Map<String, dynamic> createVirtualCurrencyMap({

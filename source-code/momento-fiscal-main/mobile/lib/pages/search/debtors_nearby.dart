@@ -57,10 +57,10 @@ class _DebtorsNearbyState extends State<DebtorsNearby> {
         double currentLongitude = position.longitude;
 
         setState(() {
-          _latStarting = currentLatitude - 0.1;
-          _latEnding = currentLatitude + 0.1;
-          _longStarting = currentLongitude - 0.1;
-          _longEnding = currentLongitude + 0.1;
+          _latStarting = currentLatitude - 0.3;
+          _latEnding = currentLatitude + 0.3;
+          _longStarting = currentLongitude - 0.3;
+          _longEnding = currentLongitude + 0.3;
         });
 
         if (!mounted) return;

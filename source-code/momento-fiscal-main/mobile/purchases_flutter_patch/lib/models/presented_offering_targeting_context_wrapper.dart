@@ -12,7 +12,7 @@ class PresentedOfferingTargetingContext extends Equatable {
     this.ruleId,
   );
 
-  toJson() => {
+  Map<String, Object> toJson() => {
     'revision': revision,
     'ruleId': ruleId,
   };

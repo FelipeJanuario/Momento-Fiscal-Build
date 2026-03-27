@@ -19,7 +19,7 @@ class ReverseGeocodingService {
       final response = await http.get(url, headers: {
         'User-Agent': 'MomentoFiscal/1.0 (contato@momentofiscal.df.gov.br)',
         'Accept-Language': 'pt-BR,pt',
-      });
+      }).timeout(const Duration(seconds: 8));
       
       if (response.statusCode != 200) {
         log('[ReverseGeocodingService] Erro HTTP: ${response.statusCode}');

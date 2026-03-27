@@ -95,15 +95,20 @@ class User < ApplicationRecord
   end
 
   def create_stripe_customer
-    return if Rails.env.test? || stripe_customer_id.present? || ENV['DEV_MODE'] == 'true'
+    return if Rails.env.test? || stripe_customer_id.present?
 
     stripe_customer = Stripe::Customer.create(email:, name:, phone:, preferred_locales: %w[pt-BR pt en],
                                               metadata: { user_id: id })
 
     return if stripe_customer.id.nil?
-    return @stripe_customer = stripe_customer if update(stripe_customer_id: stripe_customer.id)
 
-    Stripe::Customer.delete(stripe_customer.id)
+    # Usa update_column para evitar callbacks/validações que podem falhar
+    # ao descriptografar campos criptografados (ex: ambiente dev com DB de produção)
+    if update_column(:stripe_customer_id, stripe_customer.id)
+      @stripe_customer = stripe_customer
+    else
+      Stripe::Customer.delete(stripe_customer.id)
+    end
   end
 
   def stripe_customer
