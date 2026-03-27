@@ -59,6 +59,8 @@ class InAppPurchaseService {
       products = await StripeService().getProducts();
       Logger.log('Loaded ${products.length} products from Stripe');
       return products;
+    } on StripeAuthException {
+      rethrow;
     } catch (e) {
       Logger.log('Error fetching products from Stripe: $e', level: LoggerLevel.error, error: e);
       // Fallback to mock products on error

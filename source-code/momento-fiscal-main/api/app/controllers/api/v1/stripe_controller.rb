@@ -225,7 +225,20 @@ module Api
       end
 
       def create_stripe_customer
-        current_user.create_stripe_customer if current_user.stripe_customer_id.blank?
+        if current_user.stripe_customer_id.present?
+          begin
+            Stripe::Customer.retrieve(current_user.stripe_customer_id)
+          rescue Stripe::InvalidRequestError
+            # ID inválido (outro ambiente/conta) — limpa e recria
+            current_user.update_column(:stripe_customer_id, nil)
+            current_user.create_stripe_customer
+          end
+        else
+          current_user.create_stripe_customer
+        end
+      rescue StandardError => e
+        Rails.logger.error("[StripeController] Erro ao configurar cliente Stripe: #{e.message}")
+        render json: { error: 'Erro ao configurar conta Stripe. Tente novamente.' }, status: :unprocessable_entity
       end
 
       def publishable_key

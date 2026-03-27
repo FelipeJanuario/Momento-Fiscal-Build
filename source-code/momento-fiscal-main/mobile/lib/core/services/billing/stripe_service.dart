@@ -1,27 +1,45 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:momentofiscal/core/services/storage/storage_service.dart';
 import 'package:momentofiscal/core/utilities/logger.dart';
 import 'package:momentofiscal/core/utilities/api_constants.dart';
 import 'package:momentofiscal/core/models/purchasable_product.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+
+class StripeAuthException implements Exception {
+  final String message;
+  StripeAuthException([this.message = 'Sessão expirada. Faça login novamente.']);
+  @override
+  String toString() => message;
+}
 
 class StripeService {
   static final StripeService _instance = StripeService._internal();
   factory StripeService() => _instance;
   StripeService._internal();
 
-  final _storage = const FlutterSecureStorage();
+  /// Retorna headers com o token de autenticação. Lança [StripeAuthException] se
+  /// o token não estiver disponível no storage.
+  Future<Map<String, String>> _authHeaders() async {
+    final token = await storage.read(key: 'token');
+    if (token == null) {
+      throw StripeAuthException();
+    }
+    return {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    };
+  }
+
+  /// Verifica se a resposta indica sessão inválida e lança [StripeAuthException].
+  void _checkUnauthorized(int statusCode) {
+    if (statusCode == 401) throw StripeAuthException();
+  }
 
   /// Busca produtos/planos ativos do Stripe via API backend
   Future<List<PurchasableProduct>> getProducts() async {
     try {
-      String? token = await _storage.read(key: 'token');
-      
-      var headers = {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json'
-      };
+      var headers = await _authHeaders();
 
       // Busca produtos do Stripe
       var response = await http.get(
@@ -29,6 +47,7 @@ class StripeService {
         headers: headers,
       );
 
+      _checkUnauthorized(response.statusCode);
       if (response.statusCode != 200) {
         throw Exception('Failed to load products: ${response.statusCode}');
       }
@@ -102,12 +121,7 @@ class StripeService {
     required String customerEmail,
   }) async {
     try {
-      String? token = await _storage.read(key: 'token');
-      
-      var headers = {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json'
-      };
+      var headers = await _authHeaders();
 
       var body = json.encode({
         'price_id': priceId,
@@ -120,6 +134,7 @@ class StripeService {
         body: body,
       );
 
+      _checkUnauthorized(response.statusCode);
       if (response.statusCode != 200) {
         throw Exception('Failed to create checkout session: ${response.statusCode}');
       }
@@ -136,18 +151,14 @@ class StripeService {
   /// Busca assinaturas ativas do usuário
   Future<List<dynamic>> getActiveSubscriptions() async {
     try {
-      String? token = await _storage.read(key: 'token');
-      
-      var headers = {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json'
-      };
+      var headers = await _authHeaders();
 
       var response = await http.get(
         Uri.parse("${ApiConstants.baseUrl}/stripe/subscriptions"),
         headers: headers,
       );
 
+      _checkUnauthorized(response.statusCode);
       if (response.statusCode != 200) {
         throw Exception('Failed to load subscriptions: ${response.statusCode}');
       }
@@ -167,18 +178,14 @@ class StripeService {
   /// Cancela uma assinatura
   Future<void> cancelSubscription(String subscriptionId) async {
     try {
-      String? token = await _storage.read(key: 'token');
-      
-      var headers = {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json'
-      };
+      var headers = await _authHeaders();
 
       var response = await http.delete(
         Uri.parse("${ApiConstants.baseUrl}/stripe/subscriptions/$subscriptionId"),
         headers: headers,
       );
 
+      _checkUnauthorized(response.statusCode);
       if (response.statusCode != 200) {
         throw Exception('Failed to cancel subscription: ${response.statusCode}');
       }
@@ -194,18 +201,14 @@ class StripeService {
   /// Busca features habilitadas para o usuário (entitlements Stripe)
   Future<List<String>> getEnabledFeatures() async {
     try {
-      String? token = await _storage.read(key: 'token');
-      
-      var headers = {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json'
-      };
+      var headers = await _authHeaders();
 
       var response = await http.get(
         Uri.parse("${ApiConstants.baseUrl}/stripe/enabled_features"),
         headers: headers,
       );
 
+      _checkUnauthorized(response.statusCode);
       if (response.statusCode != 200) {
         throw Exception('Failed to load features: ${response.statusCode}');
       }
@@ -222,18 +225,14 @@ class StripeService {
   /// Busca preços para um produto específico
   Future<List<dynamic>> getPrices(String productId) async {
     try {
-      String? token = await _storage.read(key: 'token');
-      
-      var headers = {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json'
-      };
+      var headers = await _authHeaders();
 
       var response = await http.get(
         Uri.parse("${ApiConstants.baseUrl}/stripe/products/$productId/prices"),
         headers: headers,
       );
 
+      _checkUnauthorized(response.statusCode);
       if (response.statusCode != 200) {
         throw Exception('Failed to load prices: ${response.statusCode}');
       }
@@ -250,18 +249,14 @@ class StripeService {
   /// Busca a assinatura corrente do usuário
   Future<Map<String, dynamic>?> getCurrentSubscription() async {
     try {
-      String? token = await _storage.read(key: 'token');
-      
-      var headers = {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json'
-      };
+      var headers = await _authHeaders();
 
       var response = await http.get(
         Uri.parse("${ApiConstants.baseUrl}/stripe/current_subscription"),
         headers: headers,
       );
 
+      if (response.statusCode == 401) throw StripeAuthException();
       if (response.statusCode != 200) {
         return null;
       }

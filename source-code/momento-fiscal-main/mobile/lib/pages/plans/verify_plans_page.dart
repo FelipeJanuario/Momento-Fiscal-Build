@@ -5,8 +5,10 @@ import 'package:momentofiscal/core/models/plan_stripe.dart';
 import 'package:momentofiscal/core/models/purchasable_product.dart';
 import 'package:momentofiscal/core/models/subscription.dart';
 import 'package:momentofiscal/core/services/billing/in_app_purchase_service.dart';
+import 'package:momentofiscal/core/services/billing/stripe_service.dart';
 import 'package:momentofiscal/core/utilities/logger.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
+import 'package:momentofiscal/pages/login/auth_page.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 /// Page to display and manage subscription plans
@@ -154,6 +156,13 @@ class _VerifyPlansPageState extends State<VerifyPlansPage> {
           products = newProducts;
           isLoading = false;
         });
+      }
+    } on StripeAuthException {
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const AuthPage()),
+          (_) => false,
+        );
       }
     } catch (e) {
       Logger.log('Erro ao carregar planos e produtos: $e', level: LoggerLevel.error, error: e);

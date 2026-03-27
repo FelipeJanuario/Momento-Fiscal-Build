@@ -5,9 +5,10 @@ import 'package:momentofiscal/core/models/purchasable_product.dart';
 import 'package:momentofiscal/core/services/billing/stripe_service.dart';
 import 'package:momentofiscal/core/services/freePlanUsage/free_plans_usages_rails_servide.dart';
 import 'package:momentofiscal/core/utilities/logger.dart';
+import 'package:momentofiscal/core/services/storage/storage_service.dart';
 import 'package:momentofiscal/core/utilities/styles_constants.dart';
 import 'package:momentofiscal/pages/dashboard/dashboad_page.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:momentofiscal/pages/login/auth_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Stripe checkout button for web-based subscriptions
@@ -34,7 +35,6 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
     with WidgetsBindingObserver {
   bool _isLoading = false;
   bool _checkoutPending = false;
-  final _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
@@ -69,8 +69,8 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
       if (currentSub != null && mounted) {
         // Assinatura ativa encontrada — gravar no storage
         final productName = currentSub['items']?['data']?[0]?['price']?['product'] ?? '';
-        await _storage.write(key: 'subscriptionPlatform', value: 'stripe');
-        await _storage.write(key: 'planLevel', value: productName);
+        await storage.write(key: 'subscriptionPlatform', value: 'stripe');
+        await storage.write(key: 'planLevel', value: productName);
         _showSuccessDialog();
         return;
       }
@@ -97,7 +97,7 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
 
     try {
       // Get user email for Stripe checkout
-      String? userEmail = await _storage.read(key: 'email');
+      String? userEmail = await storage.read(key: 'email');
       
       if (userEmail == null || userEmail.isEmpty) {
         throw Exception('Email do usuário não encontrado');
@@ -127,6 +127,14 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
         throw Exception('Não foi possível abrir a página de pagamento');
       }
 
+    } on StripeAuthException {
+      _checkoutPending = false;
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const AuthPage()),
+          (_) => false,
+        );
+      }
     } catch (e) {
       Logger.log('Error during checkout: $e', level: LoggerLevel.error, error: e);
       _checkoutPending = false;
@@ -144,7 +152,7 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
 
   Future<void> _handleFreePlan() async {
     try {
-      String? userId = await _storage.read(key: 'id');
+      String? userId = await storage.read(key: 'id');
 
       if (userId == null || userId.isEmpty) {
         throw Exception('Usuário não identificado');
@@ -171,9 +179,9 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
         // Já possui plano free ativo
         if (freePlanUsages.isNotEmpty && freePlanUsages[0]['status'] == 'active') {
           // Já está usando free — gravar no storage e ir ao dashboard
-          await _storage.write(key: 'subscriptionPlatform', value: 'free');
-          await _storage.write(key: 'statusFree', value: 'active');
-          await _storage.write(key: 'planLevel', value: 'free');
+          await storage.write(key: 'subscriptionPlatform', value: 'free');
+          await storage.write(key: 'statusFree', value: 'active');
+          await storage.write(key: 'planLevel', value: 'free');
           if (mounted) _showFreePlanAlreadyActiveDialog();
           return;
         }
@@ -193,9 +201,9 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
       }
 
       // Sucesso — gravar no storage
-      await _storage.write(key: 'subscriptionPlatform', value: 'free');
-      await _storage.write(key: 'statusFree', value: 'active');
-      await _storage.write(key: 'planLevel', value: 'free');
+      await storage.write(key: 'subscriptionPlatform', value: 'free');
+      await storage.write(key: 'statusFree', value: 'active');
+      await storage.write(key: 'planLevel', value: 'free');
 
       if (mounted) {
         _showSuccessDialog();
