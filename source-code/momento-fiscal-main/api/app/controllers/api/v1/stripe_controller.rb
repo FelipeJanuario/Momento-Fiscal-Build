@@ -142,14 +142,16 @@ module Api
 
       # rubocop:disable Metrics/MethodLength
       def create_checkout_session
-        base_url = ENV.fetch("APP_BASE_URL", "https://momentofiscal.com.br")
+        base_url    = ENV.fetch("APP_BASE_URL", "https://momentofiscal.com.br")
+        success_url = params[:success_url].presence || "#{base_url}/payment/success?session_id={CHECKOUT_SESSION_ID}"
+        cancel_url  = params[:cancel_url].presence  || "#{base_url}/payment/cancel"
 
         session = Stripe::Checkout::Session.create(
           customer:             current_user.stripe_customer_id,
           mode:                 "subscription",
           line_items:           [{ price: params[:price_id], quantity: 1 }],
-          success_url:          "#{base_url}/payment/success?session_id={CHECKOUT_SESSION_ID}",
-          cancel_url:           "#{base_url}/payment/cancel",
+          success_url:          success_url,
+          cancel_url:           cancel_url,
           locale:               "pt-BR",
           allow_promotion_codes: true
         )

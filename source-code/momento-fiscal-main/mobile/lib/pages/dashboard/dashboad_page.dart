@@ -124,6 +124,28 @@ class _DashboadPageState extends State<DashboadPage> {
 
     // Proteção contra id null
     if (id == null) return;
+/////// Caso der erro na verificação do pagamento, exclua daqui até 
+    // Check plan status on Web
+    if (kIsWeb) {
+      final features = await InAppPurchaseService.instance.getEnabledFeatures();
+      String? resolvedPlan;
+      if (features.contains('limitless_proposals')) {
+        resolvedPlan = PlanFeatures.ouro;
+      } else if (features.contains('ten_proposals')) {
+        resolvedPlan = PlanFeatures.prata;
+      } else if (features.contains('two_proposals')) {
+        resolvedPlan = PlanFeatures.bronze;
+      }
+      if (resolvedPlan != null) {
+        await storage.write(key: 'planLevel', value: resolvedPlan);
+        await storage.write(key: 'subscriptionPlatform', value: 'stripe');
+        if (mounted) {
+          setState(() { planLevel = resolvedPlan; });
+        }
+      }
+      return;
+    }
+//// Aqui 
 
     // Check plan status on IOS device
     if (!kIsWeb && Platform.isIOS) {

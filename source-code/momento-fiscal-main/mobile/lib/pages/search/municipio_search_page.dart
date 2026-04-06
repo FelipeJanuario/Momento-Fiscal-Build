@@ -163,7 +163,7 @@ class _MunicipioSearchPageState extends State<MunicipioSearchPage> {
                 Expanded(
                   flex: 1,
                   child: DropdownButtonFormField<String>(
-                    value: _ufFiltro,
+                    initialValue: _ufFiltro,
                     decoration: const InputDecoration(
                       label: Text('UF'),
                     ),

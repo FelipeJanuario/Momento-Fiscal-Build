@@ -137,7 +137,8 @@ class User < ApplicationRecord
 
   def enabled_features
     Rails.cache.fetch("user/#{id}/enabled_features", expires_in: 1.minute) do
-      stripe_active_entitlements.map(&:lookup_key)
+      stripe_features = stripe_active_entitlements.map(&:lookup_key)
+      (stripe_features + test_features_override.to_a).uniq
     end
   end
 

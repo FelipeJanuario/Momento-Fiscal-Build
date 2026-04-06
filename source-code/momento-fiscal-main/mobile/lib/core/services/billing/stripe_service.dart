@@ -77,7 +77,7 @@ class StripeService {
             purchasableProducts.add(
               PurchasableProduct(
                 ProductDetails(
-                  id: product['id'],
+                  id: price['id'],
                   title: product['name'] ?? 'Plano',
                   description: product['description'] ?? '',
                   price: 'R\$ ${rawPrice.toStringAsFixed(2)}',
@@ -119,14 +119,17 @@ class StripeService {
   Future<String> createCheckoutSession({
     required String priceId,
     required String customerEmail,
+    String? successUrl,
   }) async {
     try {
       var headers = await _authHeaders();
 
-      var body = json.encode({
+      final bodyMap = <String, String>{
         'price_id': priceId,
         'customer_email': customerEmail,
-      });
+        if (successUrl != null) 'success_url': successUrl,
+      };
+      var body = json.encode(bodyMap);
 
       var response = await http.post(
         Uri.parse("${ApiConstants.baseUrl}/stripe/checkout_session"),

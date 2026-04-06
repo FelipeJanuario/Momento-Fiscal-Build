@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:momentofiscal/core/models/purchasable_product.dart';
 import 'package:momentofiscal/core/services/billing/stripe_service.dart';
@@ -110,9 +111,11 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
       }
 
       // Create Stripe checkout session and open hosted page
+      final successUrl = kIsWeb ? Uri.base.toString() : null;
       final checkoutUrl = await StripeService().createCheckoutSession(
         priceId: widget.product.id,
         customerEmail: userEmail,
+        successUrl: successUrl,
       );
 
       // Marcar checkout pendente para verificar ao retornar
