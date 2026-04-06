@@ -36,6 +36,7 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
     with WidgetsBindingObserver {
   bool _isLoading = false;
   bool _checkoutPending = false;
+  String? _subscriptionIdBeforeCheckout;
 
   @override
   void initState() {
@@ -68,21 +69,25 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
 
       final currentSub = await StripeService().getCurrentSubscription();
       if (currentSub != null && mounted) {
-        // Assinatura ativa encontrada — gravar no storage
-        final productName = currentSub['items']?['data']?[0]?['price']?['product'] ?? '';
-        await storage.write(key: 'subscriptionPlatform', value: 'stripe');
-        await storage.write(key: 'planLevel', value: productName);
-        _showSuccessDialog();
-        return;
+        final newSubId = currentSub['id'] as String?;
+        // Só reconhece pagamento se a assinatura é nova (ID diferente ou inexistente antes)
+        if (newSubId != _subscriptionIdBeforeCheckout) {
+          final productName = currentSub['items']?['data']?[0]?['price']?['product'] ?? '';
+          await storage.write(key: 'subscriptionPlatform', value: 'stripe');
+          await storage.write(key: 'planLevel', value: productName);
+          _showSuccessDialog();
+          return;
+        }
       }
 
-      // Sem assinatura ainda — pode estar processando
+      // Sem assinatura nova — usuário voltou sem pagar ou pagamento em processamento
       if (mounted) {
         _showPendingDialog();
       }
     } catch (e) {
       Logger.log('Error verifying subscription: $e', level: LoggerLevel.error, error: e);
     } finally {
+      _subscriptionIdBeforeCheckout = null;
       if (mounted) {
         setState(() { _isLoading = false; });
       }
@@ -109,6 +114,11 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
         await _handleFreePlan();
         return;
       }
+
+      // Capturar assinatura existente antes de abrir o checkout
+      // para evitar falso positivo ao retornar sem ter pago
+      final existingSub = await StripeService().getCurrentSubscription();
+      _subscriptionIdBeforeCheckout = existingSub?['id'] as String?;
 
       // Create Stripe checkout session and open hosted page
       final successUrl = kIsWeb ? Uri.base.toString() : null;

@@ -197,6 +197,7 @@ module Api
       def handle_checkout_completed(session)
         user = User.find_by(stripe_customer_id: session.customer)
         return unless user
+        return unless session.payment_status == "paid"
 
         user.update(subscription_status: "active")
         Rails.logger.info("[Stripe Webhook] Checkout completed for user #{user.id}")
