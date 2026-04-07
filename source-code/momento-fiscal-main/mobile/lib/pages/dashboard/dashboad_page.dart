@@ -142,6 +142,37 @@ class _DashboadPageState extends State<DashboadPage> {
         if (mounted) {
           setState(() { planLevel = resolvedPlan; });
         }
+        return;
+      }
+
+      // Sem plano Stripe pago — verificar plano free/trial
+      try {
+        final responseBody = await FreePlansUsagesRailsService().getFreePlansUsages(userId: id!);
+        if (responseBody != null) {
+          final decoded = json.decode(responseBody);
+          final usages = (decoded['free_plan_usages'] as List?) ?? [];
+          if (usages.isEmpty) {
+            // Novo usuário → seleção de planos incluindo Plano Free
+            if (mounted) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const VerifyPlansPage(showFreePlan: true)),
+                (_) => false,
+              );
+            }
+            return;
+          }
+          final status = (usages[0]['status'] as String?) ?? 'expired';
+          if (status == 'active') {
+            await storage.write(key: 'planLevel', value: PlanFeatures.free);
+            await storage.write(key: 'subscriptionPlatform', value: 'free');
+            if (mounted) setState(() { planLevel = PlanFeatures.free; });
+            return;
+          }
+          // Trial expirado ou atualizado → forçar upgrade
+          if (mounted) showDialogForSelectPlan();
+        }
+      } catch (_) {
+        // Em caso de erro na API, permite acesso temporário
       }
       return;
     }

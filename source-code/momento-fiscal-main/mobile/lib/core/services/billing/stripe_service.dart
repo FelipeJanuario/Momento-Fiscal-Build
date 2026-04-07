@@ -74,17 +74,27 @@ class StripeService {
             var unitAmount = price['unit_amount'] ?? 0;
             var rawPrice = unitAmount / 100.0;
 
+            final metadata = (product['metadata'] as Map<String, dynamic>?) ?? {};
+            final featuresFromMeta = _extractFeaturesFromMetadata(metadata);
+            final rawDescription = (metadata['card_description'] ?? metadata['features_title'] ?? product['description'] ?? '').toString().trim();
+            final productName = (product['name'] ?? '').toString();
+            final description = rawDescription.isNotEmpty ? rawDescription : _getFallbackDescription(productName);
+
             purchasableProducts.add(
               PurchasableProduct(
                 ProductDetails(
                   id: price['id'],
-                  title: product['name'] ?? 'Plano',
-                  description: product['description'] ?? '',
+                  title: productName,
+                  description: description,
                   price: 'R\$ ${rawPrice.toStringAsFixed(2)}',
                   rawPrice: rawPrice,
                   currencyCode: 'BRL',
                 ),
-                features: _extractFeatures(product['description'] ?? '')
+                features: featuresFromMeta.isNotEmpty
+                    ? featuresFromMeta
+                    : _extractFeatures(product['description'] ?? '').isNotEmpty
+                        ? _extractFeatures(product['description'] ?? '')
+                        : _getFallbackFeatures(productName),
               )
             );
           }
@@ -101,6 +111,62 @@ class StripeService {
       Logger.log('Error loading products from Stripe: $e', level: LoggerLevel.error, error: e);
       rethrow;
     }
+  }
+
+  /// Retorna descrição padrão por nome do plano
+  String _getFallbackDescription(String productName) {
+    final name = productName.toLowerCase();
+    if (name.contains('ouro')) return 'Recursos completos para sua operação';
+    if (name.contains('prata')) return 'Recursos avançados com suporte prioritário';
+    if (name.contains('bronze')) return 'Funcionalidades essenciais para começar';
+    if (name.contains('free') || name.contains('grátis') || name.contains('gratuito')) return 'Experimente grátis por 7 dias';
+    return '';
+  }
+
+  /// Retorna features padrão por nome do plano quando o Stripe não tem metadata
+  List<String> _getFallbackFeatures(String productName) {
+    final name = productName.toLowerCase();
+    if (name.contains('ouro')) {
+      return [
+        'Tudo do Plano Prata',
+        'Gestão de Consultoria',
+        'Consultoria personalizada',
+        'Acesso antecipado a novos recursos',
+        'Suporte 24/7',
+      ];
+    }
+    if (name.contains('prata')) {
+      return [
+        'Tudo do Plano Bronze',
+        'Consulta por Município',
+        'Análise Processual detalhada',
+        'Suporte prioritário',
+      ];
+    }
+    if (name.contains('bronze')) {
+      return [
+        'Localizar Devedores próximos',
+        'Consultar Devedores (CPF/CNPJ)',
+        'Consultar Processos Judiciais',
+        'Suporte por e-mail',
+      ];
+    }
+    if (name.contains('free') || name.contains('grátis') || name.contains('gratuito')) {
+      return [
+        'Localizar Devedores próximos',
+        'Acesso básico por 7 dias',
+      ];
+    }
+    return [];
+  }
+
+  /// Extrai features dos metadados Stripe (text_one..text_seven)
+  List<String> _extractFeaturesFromMetadata(Map<String, dynamic> metadata) {
+    const keys = ['text_one', 'text_two', 'text_tree', 'text_four', 'text_five', 'text_six', 'text_seven'];
+    return keys
+        .map((k) => (metadata[k] ?? '').toString().trim())
+        .where((v) => v.isNotEmpty)
+        .toList();
   }
 
   /// Extrai features da descrição do produto
