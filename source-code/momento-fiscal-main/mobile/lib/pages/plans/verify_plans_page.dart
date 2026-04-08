@@ -29,7 +29,7 @@ class _WebScrollBehavior extends MaterialScrollBehavior {
 /// Page to display and manage subscription plans
 /// WEB-ONLY: All purchases now via Stripe (no mobile app stores)
 class VerifyPlansPage extends StatefulWidget {
-  /// Quando true, inclui o Plano Free (trial 7 dias) na listagem.
+  /// Quando true, inclui o Plano Free (trial 3 dias) na listagem.
   final bool showFreePlan;
   const VerifyPlansPage({super.key, this.showFreePlan = false});
 
@@ -181,13 +181,13 @@ class _VerifyPlansPageState extends State<VerifyPlansPage> {
     super.dispose();
   }
 
-  /// Cria um produto virtual para o Plano Free (trial de 7 dias).
+  /// Cria um produto virtual para o Plano Free (trial de 3 dias).
   PurchasableProduct _freePlanProduct() {
     return PurchasableProduct(
       ProductDetails(
         id: 'free',
         title: 'Plano Free',
-        description: 'Experimente grátis por 7 dias',
+        description: 'Experimente grátis por 3 dias',
         price: 'R\$ 0,00',
         rawPrice: 0.0,
         currencyCode: 'BRL',
@@ -195,7 +195,7 @@ class _VerifyPlansPageState extends State<VerifyPlansPage> {
       features: [
         'Localizar Devedores próximos',
         'Consultas básicas de CPF/CNPJ',
-        'Acesso por 7 dias',
+        'Acesso por 3 dias',
         'Sem necessidade de cartão',
       ],
     );

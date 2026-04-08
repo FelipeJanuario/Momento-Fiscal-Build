@@ -79,14 +79,14 @@ class InAppPurchaseService {
         ProductDetails(
           id: 'free',
           title: 'Plano Free',
-          description: 'Acesso básico por 7 dias',
+          description: 'Acesso básico por 3 dias',
           price: 'R\$ 0,00',
           rawPrice: 0.0,
           currencyCode: 'BRL',
         ),
         features: [
           'Localizar Devedores próximos',
-          'Acesso básico por 7 dias',
+          'Acesso básico por 3 dias',
         ]
       ),
       PurchasableProduct(

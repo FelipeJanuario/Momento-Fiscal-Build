@@ -329,7 +329,7 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
           ),
           title: const Text('Plano Free Ativo'),
           content: const Text(
-            'Você já possui o Plano Free ativo com duração de 7 dias.',
+            'Você já possui o Plano Free ativo com duração de 3 dias.',
             style: TextStyle(fontSize: 16),
           ),
           actions: [
@@ -358,7 +358,7 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
           ),
           title: const Text('Plano Free já utilizado'),
           content: const Text(
-            'Você já utilizou o período gratuito de 7 dias. Selecione um plano pago para continuar.',
+            'Você já utilizou o período gratuito de 3 dias. Selecione um plano pago para continuar.',
             style: TextStyle(fontSize: 16),
           ),
           actions: [

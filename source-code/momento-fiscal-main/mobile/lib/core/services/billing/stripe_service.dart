@@ -119,7 +119,7 @@ class StripeService {
     if (name.contains('ouro')) return 'Recursos completos para sua operação';
     if (name.contains('prata')) return 'Recursos avançados com suporte prioritário';
     if (name.contains('bronze')) return 'Funcionalidades essenciais para começar';
-    if (name.contains('free') || name.contains('grátis') || name.contains('gratuito')) return 'Experimente grátis por 7 dias';
+    if (name.contains('free') || name.contains('grátis') || name.contains('gratuito')) return 'Experimente grátis por 3 dias';
     return '';
   }
 
@@ -154,7 +154,7 @@ class StripeService {
     if (name.contains('free') || name.contains('grátis') || name.contains('gratuito')) {
       return [
         'Localizar Devedores próximos',
-        'Acesso básico por 7 dias',
+        'Acesso básico por 3 dias',
       ];
     }
     return [];
