@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:momentofiscal/core/models/purchasable_product.dart';
@@ -32,30 +34,40 @@ class StripeCheckoutButton extends StatefulWidget {
   State<StripeCheckoutButton> createState() => _StripeCheckoutButtonState();
 }
 
-class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
-    with WidgetsBindingObserver {
+class _StripeCheckoutButtonState extends State<StripeCheckoutButton> {
   bool _isLoading = false;
-  bool _checkoutPending = false;
   String? _subscriptionIdBeforeCheckout;
+  StreamSubscription<Uri>? _deepLinkSub;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
+    _deepLinkSub?.cancel();
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _checkoutPending) {
-      _checkoutPending = false;
-      _verifySubscriptionAfterCheckout();
-    }
+  /// Inicia o listener de deep links para capturar o retorno do Stripe Checkout.
+  /// Chamado somente quando o checkout é aberto no browser.
+  void _startDeepLinkListener() {
+    _deepLinkSub?.cancel();
+    final appLinks = AppLinks();
+    _deepLinkSub = appLinks.uriLinkStream.listen((Uri uri) {
+      if (uri.scheme != 'momentofiscal') return;
+
+      _deepLinkSub?.cancel();
+      _deepLinkSub = null;
+
+      if (uri.host == 'payment' && uri.path == '/success') {
+        _verifySubscriptionAfterCheckout();
+      } else if (uri.host == 'payment' && uri.path == '/cancel') {
+        // Usuário cancelou no Stripe — nada a fazer, apenas limpar estado
+        _subscriptionIdBeforeCheckout = null;
+      }
+    });
   }
 
   Future<void> _verifySubscriptionAfterCheckout() async {
@@ -121,27 +133,42 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
       _subscriptionIdBeforeCheckout = existingSub?['id'] as String?;
 
       // Create Stripe checkout session and open hosted page
-      final successUrl = kIsWeb ? Uri.base.toString() : null;
+      // No mobile, usar deep link scheme para redirecionar de volta ao app
+      final String? successUrl;
+      final String? cancelUrl;
+      if (kIsWeb) {
+        successUrl = Uri.base.toString();
+        cancelUrl = null;
+      } else {
+        successUrl = 'momentofiscal://payment/success?session_id={CHECKOUT_SESSION_ID}';
+        cancelUrl = 'momentofiscal://payment/cancel';
+      }
+
       final checkoutUrl = await StripeService().createCheckoutSession(
         priceId: widget.product.id,
         customerEmail: userEmail,
         successUrl: successUrl,
+        cancelUrl: cancelUrl,
       );
 
-      // Marcar checkout pendente para verificar ao retornar
-      _checkoutPending = true;
+      // Iniciar listener de deep link antes de abrir o browser
+      if (!kIsWeb) {
+        _startDeepLinkListener();
+      }
 
       // Open Stripe hosted checkout page in browser
       final uri = Uri.parse(checkoutUrl);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        _checkoutPending = false;
+        _deepLinkSub?.cancel();
+        _deepLinkSub = null;
         throw Exception('Não foi possível abrir a página de pagamento');
       }
 
     } on StripeAuthException {
-      _checkoutPending = false;
+      _deepLinkSub?.cancel();
+      _deepLinkSub = null;
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const AuthPage()),
@@ -150,7 +177,8 @@ class _StripeCheckoutButtonState extends State<StripeCheckoutButton>
       }
     } catch (e) {
       Logger.log('Error during checkout: $e', level: LoggerLevel.error, error: e);
-      _checkoutPending = false;
+      _deepLinkSub?.cancel();
+      _deepLinkSub = null;
       if (mounted) {
         _showErrorDialog(e.toString());
       }

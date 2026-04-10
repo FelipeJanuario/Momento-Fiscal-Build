@@ -186,6 +186,7 @@ class StripeService {
     required String priceId,
     required String customerEmail,
     String? successUrl,
+    String? cancelUrl,
   }) async {
     try {
       var headers = await _authHeaders();
@@ -194,6 +195,7 @@ class StripeService {
         'price_id': priceId,
         'customer_email': customerEmail,
         if (successUrl != null) 'success_url': successUrl,
+        if (cancelUrl != null) 'cancel_url': cancelUrl,
       };
       var body = json.encode(bodyMap);
 
